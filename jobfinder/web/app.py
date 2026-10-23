@@ -128,6 +128,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         scan_fn = make_scan_fn(db, config, scan_state, broadcaster, loop)
         scheduler = JobScheduler(interval_minutes=config.check_interval_minutes, scan_fn=scan_fn)
         scheduler.start()
+        # Restore the schedule the user left armed. Without this the engine
+        # came up with no periodic job on every single launch, so
+        # `check_interval_minutes` described a cycle that only existed if
+        # someone pressed "Resume automatic scanning" again by hand — and
+        # "Scan now" (`POST /api/scan`) arms nothing, so the common path was
+        # exactly one scan ever. `auto_scan_enabled` defaults to True, so a
+        # fresh install and every config.yaml written before the flag existed
+        # arm here too; only an explicit pause keeps it quiet.
+        #
+        # `arm()` rather than `play()`: this must not fire a scan just because
+        # the process started (the app can be launched by the user opening the
+        # UI, or restarted after a crash). The first periodic run lands one
+        # interval out; `GET /api/state` reports `next_scan_at` so that wait
+        # is visible rather than looking like nothing is scheduled.
+        if config.auto_scan_enabled:
+            scheduler.arm()
+        else:
+            logger.info("Auto-scan is paused (auto_scan_enabled: false) — press Play to resume.")
 
         # T30: owns the single active FillerBot session (if any) and the
         # reaper that ends an abandoned one — see jobfinder/web/fillerbot.py's

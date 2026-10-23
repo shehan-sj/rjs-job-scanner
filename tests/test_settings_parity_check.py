@@ -63,10 +63,17 @@ def test_current_leaf_counts(csp):
     setting, not drift: the count moves because the product gained one, and
     this pin moving in the same commit as the field is the check working as
     designed rather than being bent.
+
+    **39/46 since the auto-scan-persistence fix**, which added
+    ``Config.auto_scan_enabled`` so the periodic scan cycle is armed at boot
+    instead of requiring a manual "Resume automatic scanning" click after
+    every launch. Like ``onboarding_completed`` it is route-owned rather
+    than a Settings-page field, so it is EXEMPT above and still counted
+    here — the pin tracks the Config tree, not the Settings form.
     """
     counted, expanded = csp.walk_leaves(csp.Config)
-    assert len(counted) == 38
-    assert len(expanded) == 45
+    assert len(counted) == 39
+    assert len(expanded) == 46
 
 
 def test_exempt_paths_exist_in_the_real_tree(csp):

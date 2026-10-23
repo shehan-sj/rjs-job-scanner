@@ -78,6 +78,14 @@ GENERATED_SCHEMA = FRONTEND_SRC / "api" / "schema.ts"
 EXEMPT: dict[str, str] = {
     "resume.path": "never settable over the API; PUT returns 422",
     "resume.original_filename": "derived from the upload, not typed",
+    "auto_scan_enabled": (
+        "internal play/pause flag written by POST /api/scan/play and POST "
+        "/api/scan/pause (jobfinder/web/scan.py) and read back at boot by "
+        "the lifespan (jobfinder/web/app.py); the board header's scan "
+        "control is its UI, not the Settings page -- absent from "
+        "SettingsUpdate and _settings_payload by design so there is exactly "
+        "one writer"
+    ),
     "onboarding_completed": (
         "internal one-time flag set by POST /api/onboarding/complete "
         "(jobfinder/web/onboarding.py); absent from SettingsUpdate and "

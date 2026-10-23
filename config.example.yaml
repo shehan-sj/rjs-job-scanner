@@ -1,6 +1,10 @@
 # This is a template. Copy it to config.yaml and fill in your own values.
 # config.yaml is local-only and is never committed to git (see .gitignore).
 check_interval_minutes: 20
+# Arm the periodic scan cycle on launch. The board header's play/pause
+# control writes this, so a pause you set survives a restart -- and so does
+# the default, which is to keep scanning.
+auto_scan_enabled: true
 match_threshold: 65
 filter_reposts: true
 filter_contracts: true

@@ -29,6 +29,12 @@ export interface ScanStateSnapshot {
   /** `JobScheduler.is_running` — whether periodic scanning is scheduled
    * at all (false after `POST /api/scan/pause`). */
   scan_cycle_scheduled: boolean;
+  /** `JobScheduler.next_run_time`, ISO-8601, or `null` when nothing is
+   * armed. `scan_cycle_scheduled` on its own cannot tell a user watching a
+   * quiet screen that a scan *is* coming: with the default 20-minute
+   * interval the first run is 20 minutes out, and "armed but idle" looks
+   * exactly like "no schedule at all" for that whole window. */
+  next_scan_at: string | null;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -66,6 +72,7 @@ export function toScanStateSnapshot(value: unknown): ScanStateSnapshot {
     // is worse than a false alarm.
     scheduler_alive: bool(raw.scheduler_alive, false),
     scan_cycle_scheduled: bool(raw.scan_cycle_scheduled, false),
+    next_scan_at: optStr(raw.next_scan_at),
   };
 }
 
@@ -103,7 +110,10 @@ async function post(path: string): Promise<void> {
  * **not** touch a scan already in flight — `JobScheduler.pause()`'s own
  * docstring says a running scan is on a worker thread doing blocking HTTP
  * and can't be cleanly aborted — so this is "pause the schedule", never
- * "stop this scan". */
+ * "stop this scan".
+ *
+ * Persisted: the server writes `auto_scan_enabled: false` to config.yaml,
+ * so the pause survives a restart instead of being a per-session gesture. */
 export async function pauseScan(): Promise<void> {
   await post("/api/scan/pause");
 }
@@ -112,7 +122,11 @@ export async function pauseScan(): Promise<void> {
  * periodic scanning. `JobScheduler.play()` also calls `trigger_now()`
  * internally, so an immediate scan can start right behind this request —
  * callers should re-read `/api/state` rather than assume `running` stays
- * false after calling this. */
+ * false after calling this.
+ *
+ * Persisted as `auto_scan_enabled: true`, which the server re-arms from on
+ * its next boot — pressing this is no longer something the user has to
+ * repeat after every launch. */
 export async function playScan(): Promise<void> {
   await post("/api/scan/play");
 }

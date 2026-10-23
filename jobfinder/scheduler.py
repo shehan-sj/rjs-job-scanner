@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Callable
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -13,25 +14,73 @@ logger = logging.getLogger(__name__)
 
 class JobScheduler:
     def __init__(self, interval_minutes: int, scan_fn: Callable):
-        self._scheduler = BackgroundScheduler(job_defaults={"max_instances": 1, "misfire_grace_time": 60})
+        self._scheduler = BackgroundScheduler(
+            job_defaults={
+                "max_instances": 1,
+                # ``coalesce`` collapses a backlog of missed fire times into a
+                # single run, and infinite misfire grace means a fire time
+                # that slipped runs *late* instead of being dropped.
+                #
+                # This was `60`, and 60 seconds is nothing next to a 20-minute
+                # interval on a machine that sleeps: a laptop shut for an hour
+                # wakes with `next_run_time` an hour in the past, APScheduler
+                # declares the run missed, skips it, and schedules the next
+                # one a full interval out. Worse, it says so on the
+                # ``apscheduler`` logger, which `jobfinder/web/logging_setup.py`
+                # never configures (it configures ``jobfinder``), so the skip
+                # reaches neither the log file nor the UI's log console — the
+                # scan simply does not happen and nothing anywhere says why.
+                # Measured, not assumed: see
+                # tests/test_scheduler_misfire.py.
+                "coalesce": True,
+                "misfire_grace_time": None,
+            }
+        )
         self._interval = interval_minutes
         self._scan_fn = scan_fn
 
     def start(self) -> None:
-        """Start the APScheduler engine in paused state (no periodic job yet)."""
+        """Start the APScheduler engine. No periodic job yet — callers decide
+        whether to :meth:`arm` it, which the web app's lifespan does from the
+        persisted ``auto_scan_enabled`` flag.
+        """
         self._scheduler.start()
-        logger.info("Scheduler ready — press Play to begin scanning.")
+        logger.info("Scheduler engine started.")
+
+    def arm(self) -> None:
+        """Schedule the periodic scan cycle without scanning right now.
+
+        Idempotent, and deliberately separate from :meth:`play`. Boot needs
+        "put the schedule back the way the user left it" — which is not the
+        same request as "scan immediately": launching the app (or having it
+        auto-start) should not hammer every source the moment the process
+        comes up. :meth:`play` is the explicit user action and still scans
+        at once.
+
+        The first run therefore lands one interval from now
+        (``IntervalTrigger`` with no ``start_date``), which is why
+        :attr:`next_run_time` is surfaced on ``GET /api/state`` — an armed
+        schedule whose next run is 20 minutes out is otherwise
+        indistinguishable from no schedule at all.
+        """
+        if self._scheduler.get_job("scan_cycle"):
+            return
+        self._scheduler.add_job(
+            self._run_and_announce,
+            trigger=IntervalTrigger(minutes=self._interval),
+            id="scan_cycle",
+            name="Job scan cycle",
+        )
+        job = self._scheduler.get_job("scan_cycle")
+        logger.info(
+            "Auto-scan armed — every %d minutes, next run at %s.",
+            self._interval,
+            job.next_run_time.strftime("%Y-%m-%d %H:%M:%S") if job and job.next_run_time else "unknown",
+        )
 
     def play(self) -> None:
         """Start periodic scanning and fire an immediate scan now."""
-        if not self._scheduler.get_job("scan_cycle"):
-            self._scheduler.add_job(
-                self._run_and_announce,
-                trigger=IntervalTrigger(minutes=self._interval),
-                id="scan_cycle",
-                name="Job scan cycle",
-            )
-            logger.info("Auto-scan started — every %d minutes.", self._interval)
+        self.arm()
         self.trigger_now()
 
     def reschedule(self, interval_minutes: int) -> None:
@@ -81,6 +130,17 @@ class JobScheduler:
         functioning at all.
         """
         return bool(self._scheduler.running)
+
+    @property
+    def next_run_time(self) -> datetime | None:
+        """When the periodic cycle next fires, or ``None`` when nothing is
+        armed. Exposed on ``GET /api/state`` so the UI can say *when* rather
+        than only *whether* — with a 20-minute interval and the first run an
+        interval out, "armed" and "dead" look identical for 20 minutes, which
+        is the reading that made a working schedule look like a broken one.
+        """
+        job = self._scheduler.get_job("scan_cycle")
+        return job.next_run_time if job is not None else None
 
     def trigger_now(self) -> None:
         """Run a scan cycle immediately (in the scheduler thread pool)."""

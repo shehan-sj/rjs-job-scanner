@@ -4,6 +4,7 @@ import { refreshScanStateNow, subscribeScanState } from "../api/scanStatePoller"
 import { subscribeScanStream, type ScanCompleteEvent } from "../api/stream";
 import { scanControlFor } from "./scanControlLogic";
 import { joinInline, stackWithoutSeparators, type HeartbeatPart } from "./heartbeatParts";
+import { nextScanLabel } from "./nextScanLabel";
 import "./HeartbeatStrip.css";
 
 // Notifications + heartbeat (T28).
@@ -52,6 +53,7 @@ function formatLastScan(iso: string | null): string {
   }
   return d.toLocaleString();
 }
+
 
 /** T60 — `variant="compact"` is the rail-foot presentation (docs/DESIGN.md
  * principle 4: "the heartbeat sit[s] at the foot of the rail"). All the
@@ -150,7 +152,15 @@ export function HeartbeatStrip({ variant = "full" }: { variant?: "full" | "compa
   // `precededBySeparator` values below reproduce the pre-T96 inline
   // layout's own separator placement exactly — this task fixes the
   // popover, not the inline strip's appearance.
-  const parts: Array<HeartbeatPart<ReactNode>> = [
+  const nextScanText = state
+    ? nextScanLabel({
+        schedulerAlive: state.scheduler_alive,
+        scanCycleScheduled: state.scan_cycle_scheduled,
+        nextScanAt: state.next_scan_at,
+      })
+    : null;
+
+  const rawParts: Array<HeartbeatPart<ReactNode>> = [
     {
       key: "status",
       precededBySeparator: false,
@@ -171,9 +181,20 @@ export function HeartbeatStrip({ variant = "full" }: { variant?: "full" | "compa
       ),
     },
     {
+      key: "next-scan",
+      precededBySeparator: true,
+      content: nextScanText ? <span className="heartbeat-text">{nextScanText}</span> : null,
+    },
+    {
       key: "note",
       precededBySeparator: true,
-      content: <span className="heartbeat-text heartbeat-note">Scanning continues when you close this tab.</span>,
+      // Only true while the cycle is actually armed. Said unconditionally,
+      // this promised unattended scanning to a user whose schedule was
+      // paused — which, before the boot-arming fix, was every user on every
+      // launch.
+      content: state?.scan_cycle_scheduled ? (
+        <span className="heartbeat-text heartbeat-note">Scanning continues when you close this tab.</span>
+      ) : null,
     },
     {
       key: "permission",
@@ -200,6 +221,19 @@ export function HeartbeatStrip({ variant = "full" }: { variant?: "full" | "compa
       ),
     },
   ];
+
+  // Drop the parts with nothing to say before joining. T96(a) fixed the
+  // *popover's* orphaned separator; the inline strip still had the same
+  // shape of bug, because `joinInline` inserts a separator ahead of any
+  // part whose `precededBySeparator` is true even when that part renders
+  // `null` — "permission" already did that when Notifications are
+  // unsupported, and "next-scan"/"note" above are conditional too. Filter
+  // first, then force the surviving first part to draw no leading
+  // separator, so a dropped "status" could never leave the strip opening
+  // on a dot.
+  const parts = rawParts
+    .filter((part) => part.content !== null)
+    .map((part, index) => (index === 0 ? { ...part, precededBySeparator: false } : part));
 
   const separator = <span className="heartbeat-sep">·</span>;
 

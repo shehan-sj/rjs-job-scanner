@@ -1,16 +1,20 @@
 """Scan control + state snapshot (T19).
 
-``POST /api/scan``        trigger an immediate scan cycle
-``POST /api/scan/pause``  stop periodic scanning
-``POST /api/scan/play``   (re)start periodic scanning + fire an immediate scan
+``POST /api/scan``        trigger an immediate scan cycle (one-shot — it
+                          does **not** arm the periodic cycle)
+``POST /api/scan/pause``  stop periodic scanning; persists
+                          ``auto_scan_enabled: false``
+``POST /api/scan/play``   (re)start periodic scanning + fire an immediate
+                          scan; persists ``auto_scan_enabled: true``
 ``GET  /api/scan/status`` ``{"running": bool, ...}``
 ``POST /api/reset``       wipe job tables + the resume-profile cache
                           (ports ``main.py``'s ``_clear_db_and_profile``,
                           ``main.py:205-215``: ``db.clear_all()`` + unlink
                           the profile cache)
 ``GET  /api/state``       a full snapshot — scan running, last scan
-                          time/counts, and whether the scheduler engine
-                          itself is alive
+                          time/counts, when the next periodic scan fires
+                          (``next_scan_at``), and whether the scheduler
+                          engine itself is alive
 
 ``GET /api/state`` exists because a client that loads mid-scan, or
 reconnects after a dropped connection, otherwise sees nothing — free when
@@ -43,7 +47,7 @@ from fastapi import APIRouter, Request
 from fastapi.concurrency import run_in_threadpool
 
 from .. import paths
-from ..config import Config
+from ..config import Config, save_config
 from ..orchestrator import Orchestrator
 from ..scheduler import JobScheduler
 from ..storage.database import Database
@@ -214,17 +218,58 @@ async def trigger_scan(request: Request) -> dict:
     return {"status": "accepted"}
 
 
+def _set_auto_scan_enabled(app_state, enabled: bool) -> None:
+    """Persist the play/pause choice to ``config.yaml``.
+
+    Pausing used to be in-memory only, so the pause died with the process
+    and — far worse — so did the *playing* state: the schedule was armed
+    only by a live click and every restart dropped back to no periodic job
+    at all. The web app's lifespan reads this key back on boot
+    (``jobfinder/web/app.py``), which is what makes play/pause a setting
+    rather than a per-session gesture.
+
+    Mutates the live ``Config`` in place rather than rebinding it, for the
+    same reason ``config.sync_config`` exists: ``Orchestrator`` and the
+    scan function hold a reference to this very object.
+
+    A failure to write is logged, not raised. The scheduler has already
+    been (un)armed by the time this runs, and refusing the user's
+    play/pause with a 500 because the config file is read-only would be a
+    worse outcome than a pause that does not survive restart.
+    """
+    config: Config | None = getattr(app_state, "config", None)
+    if config is None:
+        return
+    config.auto_scan_enabled = enabled
+    try:
+        save_config(config, paths.config_path())
+    except OSError as exc:
+        logger.warning("Could not persist auto_scan_enabled=%s: %s", enabled, exc)
+
+
+def _pause_sync(scheduler: JobScheduler, app_state) -> None:
+    scheduler.pause()
+    _set_auto_scan_enabled(app_state, False)
+
+
+def _play_sync(scheduler: JobScheduler, app_state) -> None:
+    # Persist *before* the immediate scan `play()` kicks off, so a scan that
+    # takes minutes doesn't leave the flag unwritten for that whole window.
+    _set_auto_scan_enabled(app_state, True)
+    scheduler.play()
+
+
 @router.post("/scan/pause")
 async def pause_scan(request: Request) -> dict:
     scheduler: JobScheduler = request.app.state.scheduler
-    await run_in_threadpool(scheduler.pause)
+    await run_in_threadpool(_pause_sync, scheduler, request.app.state)
     return {"status": "ok"}
 
 
 @router.post("/scan/play")
 async def play_scan(request: Request) -> dict:
     scheduler: JobScheduler = request.app.state.scheduler
-    await run_in_threadpool(scheduler.play)
+    await run_in_threadpool(_play_sync, scheduler, request.app.state)
     return {"status": "ok"}
 
 
@@ -258,4 +303,10 @@ async def state(request: Request) -> dict:
     snapshot = scan_state.snapshot()
     snapshot["scheduler_alive"] = scheduler.is_alive
     snapshot["scan_cycle_scheduled"] = scheduler.is_running
+    # When the *next* periodic scan fires, ISO-8601, or None when nothing is
+    # armed. `scan_cycle_scheduled` alone cannot distinguish "armed, first run
+    # 20 minutes out" from "nothing scheduled" for a user watching a quiet
+    # screen — which is the reading that made a working schedule look broken.
+    next_run = scheduler.next_run_time
+    snapshot["next_scan_at"] = next_run.isoformat() if next_run is not None else None
     return snapshot

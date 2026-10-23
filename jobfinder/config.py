@@ -173,11 +173,28 @@ class FillerBotConfig:
 _DEFAULT_CHECK_INTERVAL_MINUTES = 20
 _DEFAULT_MATCH_THRESHOLD = 65
 _DEFAULT_FILTER_CONTRACTS = True
+# Defaults to True: an unattended periodic scan is what the product *is*.
+# Before this existed the scheduler booted paused every single time and the
+# only way to arm the periodic cycle was to find the "Resume automatic
+# scanning" button and press it again after every launch — so a configured
+# `check_interval_minutes` described a schedule that was never running.
+_DEFAULT_AUTO_SCAN_ENABLED = True
 
 
 @dataclass
 class Config:
     check_interval_minutes: int = _DEFAULT_CHECK_INTERVAL_MINUTES
+    # Whether the periodic scan cycle should be armed. Written by
+    # ``POST /api/scan/play`` / ``POST /api/scan/pause``
+    # (``jobfinder/web/scan.py``) and read once at boot by the web app's
+    # lifespan, which is what makes pausing survive a restart *and* makes
+    # the default — scanning — survive one. Deliberately absent from
+    # ``SettingsUpdate``/``_settings_payload``: the board header's
+    # play/pause control already owns this bit, and a second writer on the
+    # Settings page could silently disagree with it. Same shape of
+    # internal, route-owned flag as ``onboarding_completed`` below, and
+    # exempted from the settings-parity check for the same reason.
+    auto_scan_enabled: bool = _DEFAULT_AUTO_SCAN_ENABLED
     match_threshold: int = _DEFAULT_MATCH_THRESHOLD
     filter_contracts: bool = _DEFAULT_FILTER_CONTRACTS
     # T61: set once by `POST /api/onboarding/complete` when the wizard's
@@ -359,6 +376,10 @@ def load_config(path: str | Path = "config.yaml") -> Config:
 
     return Config(
         check_interval_minutes=raw.get("check_interval_minutes", _DEFAULT_CHECK_INTERVAL_MINUTES),
+        # A pre-existing config.yaml never wrote this key, so it resolves to
+        # the default — i.e. an install that predates the flag starts
+        # scanning on its configured interval rather than staying paused.
+        auto_scan_enabled=bool(raw.get("auto_scan_enabled", _DEFAULT_AUTO_SCAN_ENABLED)),
         match_threshold=raw.get("match_threshold", _DEFAULT_MATCH_THRESHOLD),
         filter_contracts=bool(raw.get("filter_contracts", _DEFAULT_FILTER_CONTRACTS)),
         onboarding_completed=bool(raw.get("onboarding_completed", False)),
@@ -420,6 +441,7 @@ def save_config(config: Config, path: str | Path = "config.yaml") -> None:
         raw = {}
 
     raw["check_interval_minutes"] = config.check_interval_minutes
+    raw["auto_scan_enabled"] = config.auto_scan_enabled
     raw["match_threshold"] = config.match_threshold
     raw["filter_contracts"] = config.filter_contracts
     raw["onboarding_completed"] = config.onboarding_completed
