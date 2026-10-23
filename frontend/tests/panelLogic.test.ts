@@ -10,8 +10,12 @@ import {
   askedForNotInResumeChips,
   foundAgoOnSourceLine,
   matchedSkillChips,
+  panelFacts,
+  panelRailFacts,
   panelFactsGrid,
   panelHeadingLine,
+  panelIdentityLine,
+  payChipText,
   positionLabel,
   tierSentence,
   whyScoredLine,
@@ -142,6 +146,104 @@ describe("matched skills vs asked-for-not-in-résumé", () => {
     const c = card({ skills: ["Python", "SQL"], matched_skills: ["Python", "SQL"] });
     assert.deepEqual(askedForNotInResumeChips(c), []);
   });
+
+  it("never renders the same matched skill twice", () => {
+    // The owner's screenshot showed "appium" as two chips. The server builds
+    // `matched_skills` as `matched_skills + matched_tools` (local_matcher.py),
+    // two independently-matched sets that can name the same term.
+    const c = card({ matched_skills: ["appium", "cypress", "Appium", " appium "] });
+    assert.deepEqual(matchedSkillChips(c), ["appium", "cypress"]);
+  });
+
+  it("drops blank entries from the matched chips", () => {
+    const c = card({ matched_skills: ["cypress", "", "   "] });
+    assert.deepEqual(matchedSkillChips(c), ["cypress"]);
+  });
+
+  it("never renders the same gap chip twice", () => {
+    const c = card({ skills: ["Kafka", "kafka", "Terraform"], matched_skills: [] });
+    assert.deepEqual(askedForNotInResumeChips(c), ["Kafka", "Terraform"]);
+  });
+});
+
+describe("panelIdentityLine", () => {
+  it("is the heading line without the provenance clause", () => {
+    const c = card({
+      company: "Globex",
+      city: "Toronto",
+      work_arrangement: "Remote",
+      listing_type: "Promoted",
+      matched_at: isoDaysAgo(1),
+      source: "indeed",
+    });
+    // `panelHeadingLine` still carries "found 1d ago on Indeed"; this does not.
+    assert.equal(panelIdentityLine(c), "Globex  ·  Toronto  ·  Remote  ·  Promoted");
+    assert.match(panelHeadingLine(c), /found 1d ago on Indeed$/);
+  });
+
+  it("is null when the card carries no identity parts at all", () => {
+    assert.equal(panelIdentityLine(card({ company: "", city: "", work_arrangement: "Unknown", listing_type: "" })), null);
+  });
+});
+
+describe("payChipText", () => {
+  it("drops the ported Qt-era money emoji", () => {
+    const text = payChipText(
+      card({
+        compensation_min: 120000,
+        compensation_max: 150000,
+        compensation_currency: "USD",
+        compensation_interval: "yearly",
+      }),
+    );
+    assert.equal(text, "$120k – $150k/yr");
+  });
+
+  it("is null when the posting carries no compensation", () => {
+    assert.equal(payChipText(card({ compensation_min: null, compensation_max: null })), null);
+  });
+
+  it("keeps a currency code when there is no symbol for it", () => {
+    const text = payChipText(
+      card({ compensation_min: 90000, compensation_max: null, compensation_currency: "SEK", compensation_interval: "yearly" }),
+    );
+    assert.equal(text, "90k SEK/yr");
+  });
+});
+
+describe("panelFacts", () => {
+  it("splits what the posting carried from what it did not", () => {
+    const { known, missing } = panelFacts(
+      card({ job_level: "Senior", company_industry: "Software", source: "linkedin" }),
+    );
+    assert.deepEqual(known.map((f) => f.label), ["Seniority", "Industry", "Source"]);
+    assert.deepEqual(missing, ["Pay", "Function", "Listing type", "Company size", "Posted"]);
+  });
+
+  it("names every fact exactly once across the two lists", () => {
+    const all = panelFactsGrid(card({}));
+    const { known, missing } = panelFacts(card({}));
+    assert.equal(known.length + missing.length, all.length);
+  });
+
+  it("has nothing missing when the posting carried everything", () => {
+    const { missing } = panelFacts(
+      card({
+        compensation_min: 100000,
+        compensation_max: 130000,
+        compensation_currency: "USD",
+        compensation_interval: "yearly",
+        job_level: "Senior",
+        job_function: "Engineering",
+        listing_type: "Promoted",
+        company_num_employees: "501-1000",
+        company_industry: "Software",
+        date_posted: isoDaysAgo(2),
+        source: "linkedin",
+      }),
+    );
+    assert.deepEqual(missing, []);
+  });
 });
 
 describe("panelFactsGrid", () => {
@@ -182,6 +284,53 @@ describe("panelFactsGrid", () => {
     assert.equal(byLabel["Company size"], "501-1000 employees");
     assert.equal(byLabel.Industry, "Software");
     assert.equal(byLabel.Source, "LinkedIn");
+  });
+});
+
+describe("panelRailFacts", () => {
+  const paid = {
+    compensation_min: 145000,
+    compensation_max: 180000,
+    compensation_currency: "USD",
+    compensation_interval: "yearly",
+  };
+
+  it("omits Pay from the rail when the header chip already shows it", () => {
+    // The salary was printed twice on every card that has one: once as the
+    // chip beside the title, once as a rail fact.
+    const { known } = panelRailFacts(card({ ...paid, job_level: "Senior" }));
+    assert.deepEqual(known.map((f) => f.label), ["Seniority", "Source"]);
+  });
+
+  it("still lists pay as missing when the posting has none", () => {
+    // No chip is rendered in that case, so dropping it from both lists
+    // would make the panel silently stop mentioning pay at all.
+    const { known, missing } = panelRailFacts(card({ job_level: "Senior" }));
+    assert.deepEqual(known.map((f) => f.label), ["Seniority", "Source"]);
+    assert.ok(missing.includes("Pay"));
+  });
+
+  it("leaves every other fact alone", () => {
+    const { known } = panelRailFacts(card({ ...paid, job_level: "Senior", company_industry: "Software" }));
+    assert.deepEqual(known.map((f) => f.label), ["Seniority", "Industry", "Source"]);
+  });
+});
+
+describe("the Pay fact's own value", () => {
+  it("carries no money pictogram", () => {
+    // `formatSalary` prefixes a 💰 ported from the v3 Qt widget; a row
+    // labelled "Pay" does not need one.
+    const facts = panelFactsGrid(
+      card({
+        compensation_min: 145000,
+        compensation_max: 180000,
+        compensation_currency: "USD",
+        compensation_interval: "yearly",
+      }),
+    );
+    const pay = facts.find((f) => f.label === "Pay");
+    assert.ok(pay);
+    assert.equal(pay.value, "$145k – $180k/yr");
   });
 });
 

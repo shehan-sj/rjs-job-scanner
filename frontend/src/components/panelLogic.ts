@@ -44,6 +44,37 @@ export function panelHeadingLine(card: BoardCard): string {
   return parts.join("  ·  ");
 }
 
+/** The identity half of `panelHeadingLine` — company · city · arrangement ·
+ * listing type, without the "found N ago on Source" clause.
+ *
+ * The redesign gives the provenance clause its own dim line under the
+ * title instead of running it onto the end of the company line: in the
+ * owner's screenshot "Jobgether · found 2h ago on LinkedIn" put where the
+ * job *is* and where JobFinder *got it* at identical weight, and the second
+ * is the less important of the two. `panelHeadingLine` is unchanged and
+ * still exported — it remains the single-line form. */
+export function panelIdentityLine(card: BoardCard): string | null {
+  const parts: string[] = [];
+  if (card.company.trim()) parts.push(card.company.trim());
+  if (card.city.trim()) parts.push(card.city.trim());
+  if (card.work_arrangement && card.work_arrangement !== "Unknown") parts.push(card.work_arrangement);
+  if (card.listing_type.trim()) parts.push(card.listing_type.trim());
+  return parts.length ? parts.join("  ·  ") : null;
+}
+
+/** Pay, for the header's highlight chip — `formatSalary` without its
+ * leading 💰. That emoji is v3 Qt-era chrome (`widget.py`'s
+ * `_format_salary`, ported verbatim in `cardFormat.ts`); in a chip that
+ * already reads as money by position and colour it is noise. `null` when
+ * the posting carries no compensation at all, so the chip is omitted
+ * rather than rendered saying nothing. */
+export function payChipText(card: BoardCard): string | null {
+  const salary = formatSalary(card);
+  if (salary === null) return null;
+  const cleaned = salary.replace(/^[^\p{L}\p{N}$£€]+/u, "").trim();
+  return cleaned || null;
+}
+
 /** "Why this scored N" — the per-signal breakdown line plus the server's
  * free-text `reasoning`, same two sources `JobDetailPane.tsx` (dead since
  * T81) already read. No keyword-overlap-alone aside is added here: that
@@ -61,9 +92,27 @@ function normalizedSkillSet(skills: string[]): Set<string> {
 
 /** The skills actually found against the résumé (`matched_skills`) — see
  * `types/job.ts`'s field docstring for why this, not `skills`, is the
- * "matched" set. */
+ * "matched" set.
+ *
+ * Deduplicated case-insensitively, keeping the first spelling seen. The
+ * server builds this list as `matched_skills + matched_tools`
+ * (`local_matcher.py`), two independently-matched sets that can name the
+ * same term — which is why the panel rendered "appium" twice in the owner's
+ * screenshot. Deduping here rather than server-side keeps the DTO an honest
+ * record of what each matcher stage found; it is only the *display* that
+ * should never repeat itself. */
 export function matchedSkillChips(card: BoardCard): string[] {
-  return card.matched_skills;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const skill of card.matched_skills) {
+    const trimmed = skill.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+  }
+  return out;
 }
 
 /** "Asked for, not in your résumé" — `skills` (the posting's own listed
@@ -74,7 +123,19 @@ export function matchedSkillChips(card: BoardCard): string[] {
  * no gap rather than a fabricated one. */
 export function askedForNotInResumeChips(card: BoardCard): string[] {
   const matchedSet = normalizedSkillSet(card.matched_skills);
-  return card.skills.filter((s) => !matchedSet.has(s.trim().toLowerCase()));
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const skill of card.skills) {
+    const trimmed = skill.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    // Deduped for the same reason as `matchedSkillChips` above: a posting's
+    // own `skills` list can repeat a term, and the gap chips are a display.
+    if (matchedSet.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+  }
+  return out;
 }
 
 /** T83's facts grid — pay, seniority, function, listing type, company
@@ -85,18 +146,72 @@ export function askedForNotInResumeChips(card: BoardCard): string[] {
  * function (this adds listing type/industry, drops compensation's old
  * single "Compensation" label in favour of "Pay") rather than reusing it
  * outright. */
+/** The stated blank. A shared sentinel rather than eight copies of the
+ * literal, so `panelFacts` below can split known from unknown by identity
+ * instead of string-matching a value a future edit might reword. */
+export const NOT_LISTED = "Not listed";
+
 export function panelFactsGrid(card: BoardCard): FactItem[] {
   const companySize = card.company_num_employees.trim();
   return [
-    { label: "Pay", value: formatSalary(card) ?? "Not listed" },
-    { label: "Seniority", value: card.job_level.trim() || "Not listed" },
-    { label: "Function", value: card.job_function.trim() || "Not listed" },
-    { label: "Listing type", value: card.listing_type.trim() || "Not listed" },
-    { label: "Company size", value: companySize ? `${companySize} employees` : "Not listed" },
-    { label: "Industry", value: card.company_industry.trim() || "Not listed" },
-    { label: "Posted", value: card.date_posted ? timeAgo(card.date_posted) : "Not listed" },
-    { label: "Source", value: sourceLabel(card.source) || "Not listed" },
+    // `payChipText`, not `formatSalary`: the raw helper prefixes a 💰 that
+    // is v3 Qt-era chrome, and a label already saying "Pay" does not need
+    // a pictogram of money next to the number.
+    { label: "Pay", value: payChipText(card) ?? NOT_LISTED },
+    { label: "Seniority", value: card.job_level.trim() || NOT_LISTED },
+    { label: "Function", value: card.job_function.trim() || NOT_LISTED },
+    { label: "Listing type", value: card.listing_type.trim() || NOT_LISTED },
+    { label: "Company size", value: companySize ? `${companySize} employees` : NOT_LISTED },
+    { label: "Industry", value: card.company_industry.trim() || NOT_LISTED },
+    { label: "Posted", value: card.date_posted ? timeAgo(card.date_posted) : NOT_LISTED },
+    { label: "Source", value: sourceLabel(card.source) || NOT_LISTED },
   ];
+}
+
+/** The facts grid, split into what the scrape actually captured and what it
+ * did not.
+ *
+ * `panelFactsGrid` above states every row even when blank ("Not listed"),
+ * the "absent shows as a stated blank, never a guess" convention. That is
+ * right for a field the user might otherwise think was captured — but at
+ * eight rows it stopped paying: a real LinkedIn card routinely has six of
+ * the eight unknown, so the densest block in the panel was two facts and six
+ * copies of the words "Not listed" (the owner's screenshot: Pay, Function,
+ * Listing type, Company size, Posted all blank).
+ *
+ * Splitting them keeps the convention and the density: the known facts get
+ * the grid, and the unknown ones are still named — once, in a single muted
+ * line — rather than silently dropped. Nothing is hidden; it is only
+ * stated proportionately.
+ */
+export interface PanelFacts {
+  known: FactItem[];
+  /** Labels of the facts this posting did not carry, e.g. `["Pay", "Posted"]`. */
+  missing: string[];
+}
+
+export function panelFacts(card: BoardCard, omitKnown: readonly string[] = []): PanelFacts {
+  const known: FactItem[] = [];
+  const missing: string[] = [];
+  for (const fact of panelFactsGrid(card)) {
+    if (fact.value === NOT_LISTED) {
+      missing.push(fact.label);
+    } else if (!omitKnown.includes(fact.label)) {
+      known.push(fact);
+    }
+  }
+  return { known, missing };
+}
+
+/** The facts for the wide dossier's rail: everything except the ones the
+ * panel already shows somewhere more prominent.
+ *
+ * Pay is promoted to a chip beside the title, so repeating it in the rail
+ * printed the salary twice on every card that has one. It is omitted only
+ * from `known` — when a posting lists no pay there is no chip, and "pay"
+ * must still appear in the "Not listed" line rather than vanishing. */
+export function panelRailFacts(card: BoardCard): PanelFacts {
+  return panelFacts(card, payChipText(card) === null ? [] : ["Pay"]);
 }
 
 /** "Why it reached you" — the tier, in a sentence (the task brief).
@@ -145,7 +260,12 @@ export function activityTrailLines(card: BoardCard, now: Date = new Date()): str
   // What the next action would do — generic by design, not per-card data
   // (there is nothing in the enumerated fields that predicts a future
   // action), so this is fixed UI guidance rather than a guess.
-  lines.push("Use the stage control below to move it to a different stage.");
+  //
+  // "the stage control", not "the stage control below": the redesign moved
+  // it above this block in the panel, while the phone sheet
+  // (BoardCardSheet.tsx) still renders it underneath. A sentence that names
+  // a direction is wrong on one of the two surfaces either way.
+  lines.push("Use the stage control to move it to a different stage.");
 
   return lines;
 }

@@ -312,6 +312,29 @@ async def set_job_starred(job_id: str, payload: SetStarredRequest, request: Requ
     return {"status": "ok"}
 
 
+@router.get("/jobs/{job_id}/description")
+async def get_job_description(job_id: str, request: Request) -> dict:
+    """The posting's own text, fetched when the detail panel opens.
+
+    Its own endpoint rather than a field on the card: ``GET /api/board``
+    returns every card across all five stages, and a description runs to
+    several KB, so carrying it there would multiply a response the board
+    already streams for hundreds of cards — to show text that is only ever
+    read one job at a time.
+
+    ``stored`` distinguishes the two reasons the text can be absent, which
+    the panel words differently: ``false`` means this job was found by a
+    scan that ran before descriptions were kept (nothing is wrong, and a
+    rescan will fill it in), rather than the posting genuinely having no
+    body. 200 either way — "this job has no description to show" is an
+    answer, not a failure, and a 404 here would make the panel's fetch
+    look like a broken route.
+    """
+    db: Database = request.app.state.db
+    description = await run_in_threadpool(db.get_job_description, job_id)
+    return {"description": description, "stored": description is not None}
+
+
 @router.post("/matches/{job_id}/apply")
 async def apply_job(job_id: str, request: Request) -> dict:
     """Thin wrapper over ``Database.set_stage`` (the product spec — see

@@ -185,6 +185,15 @@ _SEEN_JOBS_MIGRATIONS: list[tuple[str, str]] = [
     ("compensation_max", "REAL"),
     ("compensation_currency", "TEXT"),
     ("compensation_interval", "TEXT"),
+    # The posting's own text. Scraped on every scan and used by
+    # ``local_matcher.score_job`` as its haystack, but never stored until
+    # now — so the job detail panel, the one surface whose whole purpose is
+    # reading a single job, could not show the job. Kept out of the card
+    # DTOs deliberately (see ``Database.get_job_description`` below): a
+    # board response carries every card in all five stages, and a few KB of
+    # prose per card would dwarf the rest of the payload for data only ever
+    # read one job at a time.
+    ("description", "TEXT"),
 ]
 
 # Columns added to match_history after the initial schema (T57, T41) —
@@ -355,6 +364,7 @@ class Database:
                 j.compensation_max,
                 j.compensation_currency,
                 j.compensation_interval,
+                j.description,
                 now,
             )
             for j in jobs
@@ -371,11 +381,37 @@ class Database:
                 " company_industry, company_num_employees, "
                 " compensation_min, compensation_max, "
                 " compensation_currency, compensation_interval, "
-                " first_seen) "
+                " description, first_seen) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                "        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 rows,
             )
+
+    def get_job_description(self, job_id: str) -> str | None:
+        """The posting's own text, or ``None`` when there is none to show.
+
+        Its own query rather than a field on the card DTOs: ``GET
+        /api/board`` returns every card in all five stages at once, and a
+        description runs to several KB, so carrying it there would multiply
+        the board payload for text the UI only ever displays one job at a
+        time. ``GET /api/jobs/{job_id}/description`` fetches it when the
+        panel actually opens.
+
+        ``None`` covers both "no such job" and "found by a scan that ran
+        before this column existed" — the two are indistinguishable here
+        and the caller treats them the same way, as nothing to show.
+        """
+        with self._session() as conn:
+            row = conn.execute(
+                "SELECT description FROM seen_jobs WHERE job_id = ?",
+                (job_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        text = row["description"]
+        if not text or not str(text).strip():
+            return None
+        return str(text)
 
     # ── Match history ─────────────────────────────────────────────────────────
 

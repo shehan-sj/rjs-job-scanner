@@ -118,7 +118,15 @@ export function JobModal({ card, isOpen, openerRef, ...panelProps }: JobModalPro
         }
       }}
     >
-      {card ? <JobPanel card={card} {...panelProps} /> : null}
+      {/* Keyed by job id so swapping jobs inside this one dialog remounts
+          the panel rather than reusing it. The panel holds per-job state
+          (the lazily fetched description), and a `key` is React's own way
+          to reset that — the alternative is resetting it from an effect,
+          which fires a second render pass on every swap and is what
+          `react(set-state-in-effect)` warns about. Still exactly one
+          `.job-panel` in the DOM, which
+          scripts/t100_modal_browser_check.py asserts. */}
+      {card ? <JobPanel key={card.job_id} card={card} {...panelProps} /> : null}
     </dialog>
   );
 }
