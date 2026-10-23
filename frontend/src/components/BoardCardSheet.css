@@ -1,0 +1,95 @@
+/* T85 — the phone move control (BoardCardSheet.tsx's module docstring).
+ * Hidden above the phone breakpoint by default — `JobPanel.tsx` is the
+ * desktop/tablet surface for the same selection; only one of the two is
+ * ever visible at a given width. */
+.board-card-sheet-overlay {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .board-card-sheet-overlay {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 60;
+  }
+
+  .board-card-sheet {
+    width: 100%;
+    max-height: 72vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: var(--jf-surface-2);
+    border: 1px solid var(--jf-border);
+    border-bottom: none;
+    border-radius: 16px 16px 0 0;
+    padding: 8px 18px 22px;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .board-card-sheet-grabber {
+    width: 36px;
+    height: 4px;
+    margin: 0 auto 2px;
+    border-radius: 999px;
+    background: var(--jf-border);
+  }
+
+  .board-card-sheet-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .board-card-sheet-fit {
+    flex-shrink: 0;
+    width: 42px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15.5px;
+    font-weight: 700;
+  }
+
+  .board-card-sheet-titles {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .board-card-sheet-title {
+    margin: 0;
+    font-size: var(--jf-font-row-title);
+    font-weight: 650;
+    color: var(--jf-text);
+    line-height: 1.3;
+  }
+
+  .board-card-sheet-meta,
+  .board-card-sheet-foot {
+    margin: 2px 0 0;
+    font-size: var(--jf-font-meta);
+    color: var(--jf-text-sub);
+  }
+
+  .board-card-sheet-close {
+    border: none;
+    background: var(--jf-raised);
+    color: var(--jf-text);
+    border-radius: 8px;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .board-card-sheet-open-btn {
+    align-self: flex-start;
+  }
+}

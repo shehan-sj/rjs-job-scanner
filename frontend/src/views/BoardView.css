@@ -1,0 +1,658 @@
+/* T81 — the board. Fills whatever height `.app-shell-main`
+ * (App.css) gives it, same `flex: 1 1 auto; min-height: 0` pattern
+ * `JobsView.css` established for the same reason: without it the columns
+ * shrink-wrap to their content height and leave a dead strip below them
+ * on a tall viewport instead of filling it (the measurement T64/T65 each
+ * had to add). */
+.board-view {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.board-view-loading {
+  padding: 48px;
+  text-align: center;
+  color: var(--jf-text-sub);
+}
+
+.board-view-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px 4px;
+  flex-wrap: wrap;
+}
+
+.board-view-title {
+  margin: 0;
+  font-size: var(--jf-font-page-title);
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--jf-text);
+}
+
+.board-view-tier-filter {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.board-tier-chip {
+  border: 1px solid var(--jf-border);
+  background: var(--jf-raised);
+  color: var(--jf-text-sub);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: var(--jf-font-meta);
+  cursor: pointer;
+}
+
+.board-tier-chip.active {
+  background: var(--jf-accent-tint);
+  border-color: var(--jf-accent-border);
+  color: var(--jf-text);
+}
+
+.board-tier-chip-warn {
+  color: var(--jf-warn);
+}
+
+/* T95 — wraps the header's scan control (primary + the pause/resume
+ * secondary action) so the pair sits together at the header's right edge;
+ * `.board-view-scan-now-btn` used to carry `margin-left: auto` itself, but
+ * it is now one of two siblings inside this wrapper rather than the
+ * header's last direct child. */
+.scan-control {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.board-view-scan-now-btn {
+  border: none;
+  border-radius: 8px;
+  background: var(--jf-btn-primary);
+  color: var(--jf-btn-primary-fg);
+  padding: 8px 16px;
+  font-size: var(--jf-font-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.board-view-scan-now-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.scan-control-secondary-btn {
+  border: 1px solid var(--jf-border);
+  background: var(--jf-raised);
+  color: var(--jf-text-sub);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: var(--jf-font-meta);
+  cursor: pointer;
+}
+
+.scan-control-secondary-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* T89 — the filter control, reachable from the board (the product spec
+ * principle 3) without permanently eating column width the way T59's
+ * sidebar variant does. `.board-filters-popover` is positioned relative
+ * to this anchor and taken out of document flow (`position: absolute`),
+ * so it never shrinks `.board-columns` the way the five-column grid's
+ * own siblings would — unlike the tier chips, which stay in the header's
+ * normal flow because they are small enough not to matter, this control
+ * is T59's full 280px-wide panel and must not be. */
+.board-view-filters-anchor {
+  position: relative;
+}
+
+.board-view-filters-btn {
+  border: 1px solid var(--jf-border);
+  background: var(--jf-raised);
+  color: var(--jf-text-sub);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: var(--jf-font-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.board-view-filters-btn[aria-expanded="true"] {
+  background: var(--jf-accent-tint);
+  border-color: var(--jf-accent-border);
+  color: var(--jf-text);
+}
+
+.board-filters-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 20;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 640px) {
+  .board-filters-popover {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    top: auto;
+    bottom: 68px;
+    width: auto;
+  }
+}
+
+/* T83 — the row the board and the panel (JobPanel.css) share. Both are
+ * siblings here, not a conditional swap: opening the panel narrows
+ * `.board-columns` (its grid is `minmax(0, 1fr)` per column, so it
+ * shrinks to whatever width is left) rather than un-mounting it, which
+ * is what keeps each column's own scroll position untouched. */
+.board-view-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Five equal-width columns, each scrolling its own overflow — no
+ * horizontal scroll on the board itself at the 2560 DoD width, and no
+ * dead strip below it since each column (not the row) owns the vertical
+ * overflow via its own `min-height: 0` + `overflow-y: auto`. */
+.board-columns {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  padding: 8px 20px 16px;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.board-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--jf-surface-2);
+  border: 1px solid var(--jf-border);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+/* T99 — the stage colour, carried into the column itself rather than
+ * the 9px dot this replaces (`.board-column-swatch`, removed). A tinted
+ * header band: negative margins cancel `.board-column`'s own 10px
+ * padding so the tint reaches the column's full width edge-to-edge
+ * (`border-radius` matched to the column's own top corners), which
+ * costs the grid nothing — T81's horizontal-fill assertion
+ * (`scripts/t81_board_browser_check.py`) measures column bounding
+ * boxes, not this internal band, and no width is added or removed from
+ * `.board-columns`' five-track grid. The band's own area (full column
+ * width × its padded height) is answered by `scripts/
+ * t99_column_colour_browser_check.py` as "larger than the old 9px
+ * swatch", measured, not eyeballed. Each `--jf-stage-*-band` token
+ * (tokens.css, T99) is picked per column by `data-stage` below rather
+ * than inline `style`, the same attribute-driven pattern
+ * `.board-column[data-active]` already uses.
+ *
+ * The band still carries this header's existing `--jf-text`/`--jf-dim`
+ * text unchanged — no new foreground colour, only a new background
+ * those two now also sit on, which is exactly why
+ * `scripts/check_text_role_contrast.py` had to learn this surface
+ * (its module docstring, T99) rather than this task leaving it
+ * ungraded. */
+.board-column-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -10px -10px 0;
+  padding: 10px 10px 8px;
+  border-radius: 12px 12px 0 0;
+}
+
+.board-column[data-stage="new"] .board-column-header {
+  background: var(--jf-stage-new-band);
+}
+
+.board-column[data-stage="shortlist"] .board-column-header {
+  background: var(--jf-stage-shortlist-band);
+}
+
+.board-column[data-stage="applied"] .board-column-header {
+  background: var(--jf-stage-applied-band);
+}
+
+.board-column[data-stage="replied"] .board-column-header {
+  background: var(--jf-stage-replied-band);
+}
+
+.board-column[data-stage="out"] .board-column-header {
+  background: var(--jf-stage-out-band);
+}
+
+.board-column-label {
+  margin: 0;
+  font-size: var(--jf-font-row-title);
+  font-weight: 650;
+  color: var(--jf-text);
+}
+
+.board-column-count {
+  margin-left: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--jf-font-meta);
+  color: var(--jf-text-sub);
+}
+
+/* T104 — the info control. At rest the header shows only swatch/band,
+ * name, count and this button (the brief's "Can we hide them in an
+ * info button?"). Deliberately plain/circular rather than borrowing
+ * `.board-column-count`'s monospace treatment, so it reads as a
+ * control, not a second count. No new foreground colour: `--jf-dim`
+ * is the same token `.board-column-fills` already painted on this
+ * band, already graded by `check_text_role_contrast.py`'s band
+ * extension (T99). */
+.board-column-info-btn {
+  margin-left: 2px;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--jf-border);
+  background: transparent;
+  font-size: var(--jf-font-meta);
+  font-style: italic;
+  font-weight: 650;
+  line-height: 1;
+  color: var(--jf-dim);
+  cursor: pointer;
+}
+
+.board-column-info-btn[aria-expanded="true"] {
+  background: var(--jf-raised);
+}
+
+/* The disclosure itself — the description and fills-itself line,
+ * relocated unchanged (boardLogic.ts's `BOARD_COLUMNS`) off the header
+ * and into this in-flow panel, so opening/closing it is the measured
+ * "height above the first card" shrink/grow
+ * `t104_column_info_browser_check.py` asserts (not a floating overlay,
+ * which would leave that height unchanged). */
+.board-column-info-popover {
+  margin: 6px -10px 0;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--jf-border);
+}
+
+.board-column-desc {
+  margin: 0;
+  font-size: var(--jf-font-meta);
+  color: var(--jf-text-sub);
+  line-height: 1.35;
+}
+
+.board-column-fills {
+  display: inline-block;
+  margin-top: 4px;
+  /* The 12px floor applies to the smallest text on
+     the screen, which is exactly this. The mockup drew it at 11.5 and
+     the T81 brief repeated that number; T86's ratchet caught it. Uses
+     the token rather than a literal so it also scales with the
+     viewport. */
+  font-size: var(--jf-font-meta);
+  color: var(--jf-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.board-column-body {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.board-column-empty {
+  color: var(--jf-text-sub);
+  font-size: var(--jf-font-meta);
+  padding: 8px 0;
+}
+
+/* T85 — first run / the quiet day (this task's brief): both replace the
+ * one-line `.board-column-empty` text above with a small stack (title,
+ * body copy, and an optional action row) rather than a second unrelated
+ * empty-state component, since both share the same "title + explanation
+ * + maybe a button" shape. */
+.board-column-empty-first-run,
+.board-column-empty-quiet-day {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 2px;
+}
+
+.board-column-empty-title {
+  margin: 0;
+  font-size: var(--jf-font-row-title);
+  font-weight: 650;
+  color: var(--jf-text);
+}
+
+.board-column-empty-subtitle,
+.board-column-empty-next-scan {
+  margin: 0;
+  font-size: var(--jf-font-meta);
+  color: var(--jf-text-sub);
+  line-height: 1.4;
+}
+
+.board-column-empty-scan-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.board-column-empty-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.board-column-empty-action-btn {
+  align-self: flex-start;
+  border: 1px solid var(--jf-accent-border);
+  background: var(--jf-accent-tint);
+  color: var(--jf-text);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: var(--jf-font-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* T85 — the phone stage strip (BoardView.tsx's module comment above its
+ * JSX): a horizontally scrollable row of pills, one per
+ * `BOARD_COLUMNS`, picking which single column `.board-columns` shows
+ * below. Hidden entirely above the phone breakpoint, where the
+ * five-column grid already shows every stage — this is not a second,
+ * always-visible navigation surface. */
+.board-stage-strip {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .board-stage-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 20px 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .board-stage-pill {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    border: 1px solid var(--jf-border);
+    background: var(--jf-raised);
+    color: var(--jf-text-sub);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: var(--jf-font-meta);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .board-stage-pill.active {
+    background: var(--jf-accent-tint);
+    border-color: var(--jf-accent-border);
+    color: var(--jf-text);
+  }
+
+  .board-stage-pill-count {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: inherit;
+    opacity: 0.8;
+  }
+}
+
+/* The card — "the anatomy artboard" (T81 brief): score chip at the left;
+ * role up to two lines then clipped; company/location/arrangement on the
+ * second line; a foot line below a hairline rule with stage-dependent
+ * text and up to two flags. */
+.board-card {
+  display: flex;
+  gap: 9px;
+  padding: 12px 13px;
+  border-radius: 12px;
+  background: var(--jf-raised);
+  border: 1px solid var(--jf-border);
+  cursor: pointer;
+}
+
+.board-card:focus-visible,
+.board-card:focus {
+  outline: 2px solid var(--jf-accent);
+  outline-offset: 1px;
+}
+
+.board-card-chip {
+  flex-shrink: 0;
+  width: 42px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15.5px;
+  font-weight: 650;
+}
+
+/* T101 — the star control. A plain icon-button, not a restyle of the
+ * card itself (this task's hard boundary): no border, no background
+ * change on the card, just the glyph switching from an outline to a
+ * filled star and tinting with the accent colour when active. */
+.board-card-star {
+  flex-shrink: 0;
+  align-self: flex-start;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--jf-text-sub);
+  padding: 0;
+}
+
+.board-card-star-active {
+  color: var(--jf-accent);
+}
+
+.board-card-star:focus-visible {
+  outline: 2px solid var(--jf-accent);
+  outline-offset: 1px;
+}
+
+.board-card-body {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.board-card-role {
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--jf-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  /* Never clipped mid-word — the brief's own wording. */
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.board-card-meta {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--jf-text-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board-card-foot {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--jf-divider);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.board-card-foot-text {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--jf-text-sub);
+}
+
+.board-card-flag {
+  /* 12px floor, as above. */
+  font-size: var(--jf-font-meta);
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+
+.board-card-flag-warn {
+  background: var(--jf-warn-tint);
+  color: var(--jf-warn);
+}
+
+.board-card-flag-neutral {
+  background: var(--jf-raised);
+  border: 1px solid var(--jf-border);
+  color: var(--jf-text-2);
+}
+
+/* T82 — the card lifts while dragging: the mockup tilts it ~1.5° with a
+ * shadow. `pointer-events: none` keeps `document.elementFromPoint` (the
+ * drag's drop-target lookup) from resolving to the card being dragged
+ * instead of the column underneath it. */
+.board-card-dragging {
+  transform: rotate(1.5deg);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  cursor: grabbing;
+  pointer-events: none;
+}
+
+/* The drop slot — named after the target stage and the dragged job
+ * ("Drop here to shortlist · Coursera · fit 92") so a mis-drop is visible
+ * before the pointer is released. */
+.board-drop-slot {
+  border: 2px dashed var(--jf-accent-border);
+  background: var(--jf-accent-tint);
+  color: var(--jf-text);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: var(--jf-font-meta);
+  font-weight: 600;
+}
+
+/* The ten-second undo toast. */
+.board-undo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--jf-surface-2);
+  border: 1px solid var(--jf-border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 50;
+}
+
+.board-undo-toast-text {
+  font-size: var(--jf-font-meta);
+  color: var(--jf-text);
+}
+
+.board-undo-toast-btn {
+  border: none;
+  background: none;
+  color: var(--jf-accent);
+  font-size: var(--jf-font-meta);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* T85 — "one stage at a time" at 390px (this task's brief): five columns
+ * cannot be five columns at phone width, so only the column the stage
+ * strip above marks current (`data-active="true"`, BoardView.tsx) stays
+ * in the DOM's visible flow; the other four are `display: none` rather
+ * than unmounted, so their own scroll/selection state (desktop's
+ * `selectedByStage`) survives switching stages and back. No horizontal
+ * scrollbar on the page either way — the DoD floor this media query
+ * already enforced before T85 (single-column grid, no overflow-x). */
+@media (max-width: 640px) {
+  .board-columns {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* The stage strip already names the column and carries its count, and
+     it sits directly above this. Repeating "● Applied 2" underneath it
+     is the phone saying the same thing twice in 40px of a 390px screen —
+     so the label and count are redundant here and hidden. T104's info
+     button is not: it is the only way to reach the description/
+     fills-itself note (those are still the part the strip cannot say),
+     so the header itself stays, just stripped down to that one control. */
+  .board-column-header {
+    justify-content: flex-end;
+  }
+
+  .board-column-label,
+  .board-column-count {
+    display: none;
+  }
+
+  .board-column {
+    min-height: 220px;
+  }
+
+  .board-column[data-active="false"] {
+    display: none;
+  }
+}

@@ -1,0 +1,48 @@
+# Install with: pip install -r requirements.txt
+#
+# python-jobspy declares its own dependencies correctly as of 1.4.0, so there is
+# no longer any install-order dance. The old 1.1.82 pinned numpy==1.26.3 and
+# regex<2025, which forced a `--no-deps` install plus hand-listing every
+# transitive dep here — and that regex pin has no cp314 wheel, so the old set
+# could not install on Python 3.14 at all (verified: the build fails).
+# See spec.md §5.1 for the upgrade decision and its one open risk.
+
+python-jobspy>=1.4.0
+numpy>=2.1
+anthropic>=0.40.0
+Pillow>=10.0.0
+APScheduler>=3.11,<4
+PyYAML>=6.0.1
+platformdirs>=4.0.0
+pdfplumber>=0.11.0
+pydantic>=2.0.0
+requests>=2.31.0
+playwright>=1.47.0
+
+# ── Phase 2 web backend (jobfinder/web/, T14/T15) ─────────────────────────────
+# Pinned >=0.156.0. FastAPI's prose release notes ship in neither the sdist nor
+# the wheel and could not be fetched, so the breaking-change review was done by
+# diffing extracted source across 0.137.0 / 0.143.0 / 0.151.0 / 0.155.0 /
+# 0.156.4. Caveat: a runtime-only behaviour change that leaves the API surface
+# identical would not show up that way.
+#   - 0.155.0 removed the deprecated `**extra` kwargs from
+#     Path/Query/Header/Cookie/Body/Form/File — use json_schema_extra={...}.
+#     Nothing here passes `**extra`, so this matters only for future code.
+#   - Across 0.143.0–0.151.0, `FastAPI(**extra)` / `self.app.extra` and the
+#     long-deprecated `openapi_prefix` constructor arg were removed. Unused here.
+#   - 0.143.0+ added `app.frontend(path, directory=..., fallback=...)` for
+#     serving a built SPA. That is the mechanism T21 will use; deliberately not
+#     wired yet because dist/ does not exist until Phase 3.
+#   - 0.143.0+ also added native OpenTelemetry instrumentation, on by default
+#     but inert here: it only activates once a tracer/meter/logger provider is
+#     configured globally, which this app never does.
+#   - 0.151.0 → 0.156.4: applications.py, routing.py and middleware/ are
+#     otherwise unchanged in API surface.
+fastapi>=0.156.0
+uvicorn[standard]>=0.54.0
+python-multipart>=0.0.9
+httpx>=0.28.0  # TestClient only; never used for outbound JobFinder requests
+
+# Pulled in by python-jobspy (listed for visibility, not pinned by us):
+#   beautifulsoup4, curl_cffi, markdownify, pandas, pydantic, requests
+# curl_cffi replaced tls-client as jobspy's HTTP backend in the 1.4 line.

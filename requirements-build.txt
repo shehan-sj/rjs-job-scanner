@@ -1,0 +1,21 @@
+# Build-only dependencies. NOT installed by setup.sh / setup.bat and
+# deliberately NOT listed in requirements.txt.
+#
+# T33 removed PyInstaller from requirements.txt when it deleted the Qt
+# installer chain, and T34 reintroduces a build — but a packaging tool is
+# not a runtime dependency. Keeping it out of requirements.txt means
+# running JobFinder from source does not drag in PyInstaller (a ~20 MB
+# install with a compiled bootloader), and a user who only ever runs
+# `python -m jobfinder` never has to have it.
+#
+# Install only when you intend to produce a distributable:
+#
+#     .venv/Scripts/python.exe -m pip install -r requirements-build.txt
+#     .venv/Scripts/python.exe scripts/build_app.py
+#
+# The runtime dependencies in requirements.txt must already be installed
+# in the same environment: PyInstaller discovers what to bundle by
+# importing the app's own imports, so anything missing from the venv is
+# simply absent from the build.
+
+pyinstaller>=6.11.0

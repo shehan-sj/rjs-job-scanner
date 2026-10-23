@@ -1,0 +1,111 @@
+/* T64 — the split master-detail's 580px list row (docs/DESIGN.md's
+ * "Superseded 2026-10-22" block). Rows no longer expand (that was T58's
+ * Variation B); this is the whole row, always. Selecting it (click or
+ * Enter/Space) fills the detail pane instead of growing in place.
+ */
+.job-row {
+  background: var(--jf-card);
+  border: 1px solid var(--jf-card-border);
+  border-radius: 8px;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.job-row-selected {
+  border-color: var(--jf-accent);
+  background: var(--jf-raised);
+}
+
+.job-row-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.job-row-head:hover {
+  background: var(--jf-card-hover);
+}
+
+.job-row-head:focus-visible {
+  outline: 2px solid var(--jf-accent);
+  outline-offset: -2px;
+}
+
+.job-row-title-block {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.job-row-title {
+  margin: 0;
+  font-size: var(--jf-font-row-title);
+  line-height: 1.3;
+  font-weight: 600;
+  color: var(--jf-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.job-row-subtitle {
+  margin: 0;
+  font-size: var(--jf-font-meta);
+  line-height: 1.3;
+  color: var(--jf-text-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 38px mono chip — smaller than the 48px circular ScoreBadge the detail
+ * pane still uses, so the collapsed row's own height drives the column,
+ * not the badge's. */
+.job-row-head .job-score-badge {
+  width: 38px;
+  height: 38px;
+  font-size: var(--jf-font-meta);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  flex-shrink: 0;
+}
+
+.job-row-quick-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.job-row-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--jf-btn-secondary);
+  color: var(--jf-btn-secondary-fg);
+}
+
+.job-row-icon-btn:hover {
+  background: var(--jf-btn-secondary-h);
+}
+
+.job-row-icon-apply:hover {
+  background: var(--jf-score-strong);
+  color: #fff;
+}
+
+.job-row-icon-dismiss:hover {
+  background: var(--jf-btn-danger);
+  color: var(--jf-btn-danger-fg);
+}

@@ -1,0 +1,162 @@
+/* Heartbeat + notifications strip (T28) — a thin, always-visible status
+   bar fixed to the top of the viewport (the Settings trigger already
+   occupies the top-right corner, App.css, so this strip leaves that
+   corner clear). */
+.heartbeat-strip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 16px;
+  background: var(--jf-hdr);
+  border-bottom: 1px solid var(--jf-hdr-line);
+  font-size: 12px;
+  color: var(--jf-text-sub);
+}
+
+.heartbeat-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  display: inline-block;
+}
+
+.heartbeat-status-unknown {
+  background: var(--jf-text-dim);
+}
+
+.heartbeat-status-idle {
+  background: var(--jf-score-strong);
+}
+
+/* T96(b) — scanning gets motion; idle does not. The colour (`--jf-good`
+   vs `--jf-accent`, theme/tokens.css) already differs between the two
+   states regardless of motion — that is what keeps them distinguishable
+   under `prefers-reduced-motion: reduce` below, where the animation is
+   not merely slowed but entirely absent, per that media query's own
+   contract (a status indicator that cannot be stilled is an
+   accessibility problem, not a flourish). */
+.heartbeat-status-scanning {
+  background: var(--jf-score-good);
+}
+
+/* A dead scheduler must look obviously different from idle, not just a
+   different colour buried in a quiet dot — pulses red, and the label
+   text itself says "not responding" rather than a neutral word. */
+.heartbeat-status-dead {
+  background: var(--jf-tag-warn-fg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .heartbeat-status-scanning {
+    animation: heartbeat-pulse 1.2s ease-in-out infinite;
+  }
+
+  .heartbeat-status-dead {
+    animation: heartbeat-pulse 0.6s ease-in-out infinite;
+  }
+}
+
+@keyframes heartbeat-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.heartbeat-text {
+  white-space: nowrap;
+}
+
+.heartbeat-note {
+  color: var(--jf-text-dim);
+  white-space: normal;
+}
+
+.heartbeat-sep {
+  color: var(--jf-text-dim);
+}
+
+.heartbeat-notify-btn {
+  background: var(--jf-btn-secondary);
+  color: var(--jf-btn-secondary-fg);
+  border: none;
+  border-radius: 4px;
+  padding: 2px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.heartbeat-notify-btn:hover {
+  background: var(--jf-btn-secondary-h);
+}
+
+/* T60 — rail-foot compact variant: a single status dot sized for the
+   68px rail, expanding into the same content as `.heartbeat-strip` in a
+   popover anchored above it rather than a second, parallel copy of the
+   status logic. */
+.heartbeat-compact {
+  position: relative;
+}
+
+.heartbeat-compact-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.heartbeat-compact-btn:hover {
+  background: var(--jf-btn-secondary);
+}
+
+.heartbeat-compact-btn .heartbeat-dot {
+  width: 11px;
+  height: 11px;
+}
+
+.heartbeat-compact-popover {
+  position: absolute;
+  left: 100%;
+  bottom: 0;
+  margin-left: 8px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 260px;
+  padding: 10px 12px;
+  background: var(--jf-hdr);
+  border: 1px solid var(--jf-hdr-line);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--jf-text-sub);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* T96(a) — one row per part (heartbeatParts.ts's stacked form), never
+   the inline separator glyph between them: the popover's own layout
+   provides the visual break between lines, so it does not need the
+   `.heartbeat-sep` dot the inline strip uses for the same purpose. */
+.heartbeat-compact-popover-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.heartbeat-compact-popover-row:empty {
+  display: none;
+}

@@ -1,0 +1,50 @@
+/* T60/T64/T65 — app shell layout. The rail (Rail.css) is fixed-position
+   and owns its own width/placement, so this is just the content region
+   reserving space for it: 112px on the left for the desktop rail (T64:
+   corrected from 68px once the rail actually carries icons; T65: widened
+   again from 88px so "Sources & keys" stops wrapping at the bigger T65
+   type scale), a 56px bottom gap for the phone bottom tab bar.
+ *
+ * T65 (a) — this used to be `min-height: 100vh`, which let the page grow
+ * past the viewport instead of filling it: the split list/detail panes
+ * (JobsView.css) stopped at their content height and left the rest of a
+ * 1400px-tall viewport as dead space below them, rather than the panes
+ * themselves filling it and scrolling their own overflow. `height: 100vh`
+ * plus the flex column below gives `JobsView` a real, definite height to
+ * flex into (`.jobs-view`'s own `flex: 1 1 auto; min-height: 0`), so the
+ * body row can finally stretch instead of shrink-wrapping. The
+ * `overflow-y: auto` here is the fallback for the non-split pages
+ * (Résumé/Sources & keys) that still just scroll as a whole page — only
+ * the split view's own panes (list/detail/filter panel) scroll
+ * internally. */
+.app-shell {
+  height: 100vh;
+}
+
+.app-shell-main {
+  margin-left: 112px;
+  height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  /* Reserves room for the collapsed log drawer's one-line strip
+     (LogDrawer.css's `.log-drawer-header`, 32px) so a full-height pane
+     doesn't render its last pixel row underneath it. */
+  padding-bottom: 32px;
+}
+
+.shell-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+@media (max-width: 640px) {
+  .app-shell-main {
+    margin-left: 0;
+    /* Phone bottom tab bar (56px) + the log strip (32px) stack above
+       each other at this width (Rail.css / LogDrawer.css). */
+    padding-bottom: 88px;
+  }
+}

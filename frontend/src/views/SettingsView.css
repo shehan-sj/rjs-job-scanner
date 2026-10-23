@@ -1,0 +1,234 @@
+/* T60 — this used to be `.settings-overlay`/`.settings-panel`, a
+   fixed-position modal centred over the whole viewport. It's a normal
+   rail destination now (docs/DESIGN.md principle 4), so it lays out like
+   any other page body instead of floating above one. */
+.settings-page {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-title {
+  margin: 0;
+  font-size: 20px;
+  color: var(--jf-text);
+}
+
+.settings-body {
+  padding: 10px 0 24px;
+}
+
+.settings-loading,
+.settings-error {
+  padding: 24px;
+  color: var(--jf-text-sub);
+}
+
+.settings-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-section {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-section-label {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--jf-text);
+}
+
+.settings-section-hint {
+  font-size: 12px;
+  color: var(--jf-text-sub);
+}
+
+.settings-divider {
+  height: 1px;
+  background: var(--jf-card-border);
+  margin: 14px 0;
+}
+
+/* Group heading (T53). One level above .settings-section-label: it names
+   what a run of fields has in common. On the Location tab this carries
+   the whole fix — it is what tells the user that "where you'll accept a
+   job" and "where JobFinder searches" are different questions — so it has
+   to read as a heading rather than as another field label. Deliberately
+   plain: T60 replaces this modal, and the durable part of T53 is the
+   grouping and its wording, not its styling. */
+.settings-group-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.settings-group-label {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--jf-text);
+}
+
+.settings-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--jf-text);
+  cursor: pointer;
+}
+
+.settings-input,
+.settings-select,
+.settings-textarea {
+  background: var(--jf-input-bg);
+  border: 1px solid var(--jf-input-border);
+  border-radius: 6px;
+  color: var(--jf-text);
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.settings-input:focus,
+.settings-select:focus,
+.settings-textarea:focus {
+  outline: none;
+  border-color: var(--jf-input-focus);
+}
+
+.settings-textarea {
+  resize: vertical;
+}
+
+.settings-resume-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-resume-filename {
+  flex: 1;
+  font-size: 13px;
+  color: var(--jf-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-file-input {
+  display: none;
+}
+
+.settings-resume-message {
+  font-size: 12px;
+  color: var(--jf-text-sub);
+}
+
+.settings-source-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-source-checkbox {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.settings-source-hours-label {
+  font-size: 12px;
+  color: var(--jf-text-sub);
+  margin-top: 4px;
+}
+
+.settings-credential-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 0 22px;
+}
+
+.settings-credential-label {
+  flex: 0 0 140px;
+  font-size: 12px;
+  color: var(--jf-text-sub);
+}
+
+.settings-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--jf-card-border);
+}
+
+.settings-save-error {
+  flex: 1;
+  color: var(--jf-btn-danger);
+  font-size: 12px;
+}
+
+.settings-saved-message {
+  flex: 1;
+  color: var(--jf-score-strong, var(--jf-text-sub));
+  font-size: 12px;
+}
+
+.settings-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.settings-btn-primary {
+  background: var(--jf-btn-primary);
+  color: var(--jf-btn-primary-fg);
+}
+
+.settings-btn-primary:hover {
+  background: var(--jf-btn-primary-h);
+}
+
+.settings-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.settings-btn-secondary {
+  background: var(--jf-btn-secondary);
+  color: var(--jf-btn-secondary-fg);
+}
+
+.settings-btn-secondary:hover {
+  background: var(--jf-btn-secondary-h);
+}
+
+.settings-btn-danger {
+  background: var(--jf-btn-danger);
+  color: var(--jf-btn-danger-fg);
+  width: fit-content;
+}
+
+.settings-btn-danger:hover {
+  background: var(--jf-btn-danger-h);
+}

@@ -1,0 +1,183 @@
+/* T59 — the 264px collapsible filter panel (docs/DESIGN.md principle 3:
+   "a 264px panel beside the results"). Collapsing hands the width back
+   to the results list (JobsView.css's matches-with-panel row). */
+/* T65 (a) — `align-self: flex-start` used to shrink this panel to its
+ * own content height and leave the rest of the row (list/detail column)
+ * empty beside it — the root cause of the void the owner's build showed
+ * at 2560x1400. The row now stretches every
+ * child to its own height (`align-items: stretch` on
+ * `.jobs-view-matches-with-panel`, JobsView.css / below); this panel
+ * scrolls its own overflow rather than growing the page. */
+.filter-panel {
+  width: 264px;
+  flex: 0 0 264px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--jf-card);
+  border: 1px solid var(--jf-card-border);
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.filter-panel-collapsed {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 6px;
+  align-items: center;
+}
+
+.filter-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filter-panel-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--jf-text);
+}
+
+.filter-panel-collapse-btn {
+  background: transparent;
+  border: 1px solid var(--jf-card-border);
+  border-radius: 6px;
+  color: var(--jf-text-sub);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px 8px;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+.filter-panel-collapse-btn:hover {
+  background: var(--jf-card-hover);
+  color: var(--jf-text);
+}
+
+.filter-panel-loading {
+  color: var(--jf-text-sub);
+  font-size: 13px;
+}
+
+.filter-panel-error {
+  background: var(--jf-tag-warn-bg);
+  color: var(--jf-tag-warn-fg);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.filter-panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-panel-label {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--jf-text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.filter-panel-arrangement {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--jf-input-bg);
+  border: 1px solid var(--jf-card-border);
+}
+
+.filter-panel-arrangement-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--jf-tab-inactive-fg);
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 4px;
+}
+
+.filter-panel-arrangement-btn.active {
+  background: var(--jf-tab-active);
+  color: var(--jf-tab-active-fg);
+}
+
+.filter-panel-arrangement-btn:not(.active):hover {
+  background: var(--jf-card-hover);
+}
+
+.filter-panel-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--jf-text);
+  cursor: pointer;
+}
+
+/* T60 — docs/DESIGN.md's Phone section: "the filters become one sheet
+   behind a single control". Same component, same collapse state
+   (collapsed = one control; expanded = the panel) T59 already built —
+   only the *positioning* changes here, via a media query, not the
+   component's own logic. Collapsed becomes a small pinned button;
+   expanded becomes a full-screen sheet instead of a 264px side column. */
+@media (max-width: 640px) {
+  .jobs-view-matches-with-panel {
+    flex-direction: column;
+  }
+
+  .filter-panel-collapsed:not(.filter-panel-popover) {
+    position: fixed;
+    right: 12px;
+    bottom: 68px;
+    z-index: 15;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  }
+
+  .filter-panel:not(.filter-panel-collapsed):not(.filter-panel-popover) {
+    position: fixed;
+    inset: 0;
+    bottom: 56px;
+    z-index: 15;
+    width: auto;
+    overflow-y: auto;
+    border-radius: 0;
+  }
+}
+
+/* T89 — the board's popover mount (`BoardView.tsx`/`BoardView.css`). The
+ * caller positions `.board-filters-popover` (fixed, anchored under the
+ * header's "Filters" button); this just sizes the panel to fit that
+ * popover rather than the T59 sidebar's 264px column or the T60 phone
+ * sheet's `inset: 0`, both of which assume JobsView's layout. Because the
+ * popover is positioned out of document flow, it never consumes any of
+ * the board's five-column grid width (T81's committed horizontal-fill
+ * assertion) regardless of viewport. */
+.filter-panel-popover {
+  width: 280px;
+  flex: 0 0 280px;
+  max-height: min(70vh, 520px);
+}
+
+@media (max-width: 640px) {
+  /* `.board-filters-popover` (BoardView.css) already switches to a fixed,
+   * edge-to-edge sheet at this width; this panel's own 280px must not
+   * fight that. */
+  .filter-panel-popover {
+    width: auto;
+    flex: 0 0 auto;
+    max-height: min(70vh, 480px);
+  }
+}

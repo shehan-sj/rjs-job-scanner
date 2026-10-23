@@ -1,0 +1,73 @@
+# ── Build output ──────────────────────────────────────────────────────────────
+dist/
+build/
+*.spec.bak
+
+# ── Installer output ──────────────────────────────────────────────────────────
+installer/JobFinder-Setup*.exe
+installer/JobFinder*.dmg
+
+# ── PyInstaller ───────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ── User data (never commit) ──────────────────────────────────────────────────
+data/
+logs/
+data/jobfinder.db
+data/resume_profile.json
+data/widget_pos.json
+
+# ── Resume (personal file) ────────────────────────────────────────────────────
+*.pdf
+*.docx
+
+# ── API keys / secrets ────────────────────────────────────────────────────────
+# config.yaml holds the real local config (incl. secrets) and is never committed.
+# config.example.yaml is the committed template — keep every credential field
+# in it blank. If you accidentally commit a key, rotate it immediately at
+# console.anthropic.com
+
+# ── Python virtual environments ───────────────────────────────────────────────
+.venv/
+venv/
+env/
+.env
+
+# ── IDEs ──────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.suo
+*.user
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+config.yaml
+*.yaml
+!config.example.yaml
+!.pre-commit-config.yaml
+# Test fixture configs (T53). The blanket `*.yaml` above exists to keep a
+# real config.yaml — which holds live credentials — out of the repo, and
+# that still holds everywhere else. These are committed on purpose: a
+# round-trip test that proves "a config the old build wrote still loads
+# with every value preserved" is only worth anything if the config it
+# loads is a frozen artifact in version control rather than something the
+# test generates from today's code. Credential-shaped values under this
+# path must stay obviously fake.
+!tests/fixtures/config/*.yaml
+browsers/
+data/user_extras.yaml
+
+# ── Local tool and editor state (never commit) ────────────────────────────────
+# Machine-local scratch belonging to whoever is working in the tree, not to the
+# project. These can appear in any subdirectory a tool is run from, so each
+# pattern is anchored both at the root and recursively.
+.claude/
+**/.claude/
+.harness-worktrees/
+.harness/

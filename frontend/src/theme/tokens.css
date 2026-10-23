@@ -1,0 +1,617 @@
+/*
+ * Theme tokens. This file is the canonical palette (the product spec /
+ * the task ledger) — there is no longer a Python-side `Theme` dataclass
+ * behind it. The retired palette module and the AST-based script that
+ * used to check this file against it are both gone as of T56;
+ * `scripts/check_theme_contrast.py` now parses this file directly and is
+ * the only remaining gate.
+ *
+ * `--jf-ground` / `--jf-surface` / `--jf-raised` / `--jf-border` and
+ * `--jf-text` / `--jf-dim` / `--jf-accent` / `--jf-good` / `--jf-warn` /
+ * `--jf-bad` are docs/DESIGN.md's "Palette" section, verbatim — every hex
+ * value and the WCAG ratio it was computed to reach were measured there
+ * before anything was drawn (dark's worst pair 6.24, light's 4.97,
+ * against AA's 4.5 floor for small text). Light has no documented
+ * "raised" elevation tier — it is set equal to `--jf-surface` rather than
+ * an invented value, since docs/DESIGN.md never computed one.
+ *
+ * The remaining `--jf-*` properties below (bg/card/hdr/input/btn/tab/
+ * score/tag-*) predate T56 (ported from the deleted `jobfinder/ui/
+ * theme.py` in T22/T33). Through T78 they still carried their own
+ * literal hex values, which meant six of the ten canonical tokens above
+ * had zero consumers anywhere in `frontend/src` — the new palette was
+ * declared but nothing on screen actually read it. T88 (the product spec,
+ * "Found while implementing T78") re-points every one of these 40
+ * properties at the canonical/shell/support tokens by `var()` reference
+ * instead of a copied hex, so light/dark follow automatically and the
+ * new colours are finally visible on Settings, Onboarding, Résumé and
+ * FillerBot. No component CSS or TSX changed — only this file. The one
+ * genuinely new value is `--jf-bad-hover` (T88), since the old family
+ * had a hover step for danger buttons that the canonical ten has no
+ * equivalent of. `--jf-card-bg` (a typo in `.resume-tab-btn` with no
+ * corresponding declaration anywhere) and `--jf-danger` / `--jf-accent`
+ * used only via `var(--x, fallback)` are no longer needed: T56's
+ * missing-token check caught the first as a silent styling bug and the
+ * accent/bad tokens now genuinely exist, so ResumeTab.css's references
+ * were fixed rather than left to quietly fall back forever.
+ *
+ * `--jf-text-sub` and `--jf-text-dim` both collapse onto `--jf-dim`
+ * (T88, deliberate): `--jf-text-dim` (`#6d7580`) was below AA on both
+ * surfaces it was used against, and collapsing the two *raises* contrast
+ * rather than lowering it. The arrangement chips
+ * (`--jf-tag-remote/hybrid/onsite-*`) collapse to neutral
+ * (`--jf-raised`/`--jf-text-2`) for the same reason the product spec reserves
+ * hue for the pipeline — the chips already say "Remote"/"Hybrid"/
+ * "On-site" in words.
+ *
+ * `--jf-score-strong/good/fair/weak` map onto the STATUS colours
+ * (`--jf-good`/`--jf-accent`/`--jf-warn`/`--jf-bad`), **not** onto the
+ * fit ramp. T88 first mapped them onto `--jf-fit-*-bg` and the Lead
+ * check caught it: ten component rules use these tokens as a text
+ * `color:` — log warnings and errors (LogDrawer.css), onboarding
+ * messages (OnboardingView.css, three of them), FillerBot status,
+ * JobCardView, SettingsView — and a fit-ramp *background* used as text
+ * measures 1.17–1.75:1. Invisible, in ten places, with every gate green.
+ *
+ * The lesson is in the name: `--jf-score-*` is a status ramp wearing a
+ * score name. Only `ScoreBadge` and `JobRow` use it for a score;
+ * everything else uses it for severity and state. The status colours
+ * clear AA as text on both surfaces in both modes (worst 4.59) and
+ * still work as the dot fills `HeartbeatStrip` and `FillerBotView` use
+ * them for.
+ *
+ * The fit ramp therefore stays unconsumed until T81 builds the board
+ * card it was designed for — a chip that owns its own background, which
+ * is the only place an inverted step is safe.
+ *
+ * (Superseded reasoning, kept because it is still true of the fit ramp:
+ * `--jf-fit-3-bg` inverts
+ * (dark text on a light fill in dark mode), and `ScoreBadge.tsx` is the
+ * only consumer that computes its foreground dynamically to match —
+ * every other consumer (`JobRow.css`'s `.job-row-icon-apply:hover`,
+ * `HeartbeatStrip.css`, `FillerBotView.css`'s `.fb-dot-strong`) either
+ * hardcodes a foreground or inherits the ambient one, so the inverted
+ * step would go unreadable there.)
+ *
+ * `best_fg_for()` (the luminance-based contrast helper) lives as a TS
+ * utility (frontend/src/theme/theme.ts), not a static token, since it is
+ * logic — T24 needs it for the score badge.
+ *
+ * Precedence (host contract): explicit `data-theme` attribute (set from
+ * `config.ui.theme` via GET /api/settings, see theme.ts's `applyTheme`)
+ * always wins over the OS `prefers-color-scheme`; with no explicit
+ * attribute, the OS preference decides; with neither, :root's own
+ * declarations are the fallback. Dark is now the default (docs/DESIGN.md
+ * — "dark (default)"), so the bare `:root` block below carries the dark
+ * values (old and new tokens alike) and the media-query override flips
+ * to light, the inverse of the pre-T56 layout where light was the
+ * un-attributed fallback and the query added dark on top of it.
+ */
+
+:root {
+  /* ── T64/T65 type scale (docs/DESIGN.md's "Superseded 2026-10-22" block)
+   * ─────────────────────────────────────────────────────────────────
+   * Type is hardcoded 12-13px, legible at 1440 but too small at the
+   * owner's real 2560 display. These four tokens replace hardcoded px
+   * values in the split-view components (JobRow.css / JobDetailPane.css
+   * / JobsView.css) with `clamp()` against two measured anchors —
+   * today's 1440 baseline and the 2560 target — rather than a pile of
+   * width-specific media queries. Each is
+   * `clamp(min, calc(intercept + slope*vw), max)`, solved so the calc
+   * term equals the 1440px value at vw=1440 and the max at vw=2560; the
+   * `calc()` term is what makes it scale continuously between those two
+   * widths instead of jumping at a breakpoint, and the `clamp()`
+   * floor/ceiling stop it from ever going below today's 12/13px minimum
+   * or past the 2560 target on an even wider display.
+   *
+   * T65 (c) — docs/DESIGN.md's original 2560 target (body 15 / row title
+   * 17 / page title 30) is what T64 shipped verbatim, and the owner
+   * tested that build and asked for larger again. These four anchors go
+   * bigger at both ends of the scale (1440: row title 16 / meta 13 /
+   * body 15 / page title 26; 2560: row title 21 / meta 16 / body 19 /
+   * page title 34) while keeping T56's 12px floor on `--jf-font-meta`
+   * (`tests/test_theme_css_tokens.py::test_no_css_font_size_below_12px`
+   * only matches a literal `font-size: Npx`, never a `clamp()`
+   * reference, so that floor is enforced here, by construction, same as
+   * the comment below already states).
+   *
+   * Theme-independent (same in dark/light), but still duplicated into
+   * every theme block below (`check_theme_contrast.py`'s
+   * `missing_required_tokens` requires every `var()`-referenced-without-
+   * fallback token to resolve in *each* theme block, not just this one)
+   * — the regex in `tests/test_theme_css_tokens.py` only matches a
+   * literal `font-size: Npx`, so none of these (nor any `var()`
+   * reference to them) trips that floor check; the floor is enforced
+   * here, by construction, instead. */
+  --jf-font-row-title: clamp(13px, calc(9.57px + 0.446vw), 21px);
+  --jf-font-meta: clamp(12px, calc(9.14px + 0.268vw), 16px);
+  --jf-font-body: clamp(13px, calc(9.86px + 0.357vw), 19px);
+  --jf-font-page-title: clamp(22px, calc(15.71px + 0.714vw), 34px);
+
+  /* ── New palette (docs/DESIGN.md) — dark ─────────────────────────── */
+  --jf-ground: #0d0f11;
+  --jf-surface: #15181b;
+  --jf-raised: #1d2126;
+  --jf-border: #2a2f35;
+  --jf-text: #eceef0;
+  --jf-dim: #a0a7af;
+  --jf-accent: #4a93e8;
+  --jf-good: #3fbf8e;
+  --jf-warn: #d4a04a;
+  --jf-bad: #e8808a;
+
+  /* ── Shell (T78) — dark ────────────────────────────── */
+  --jf-surface-2: #101316;
+  --jf-border-strong: #3a4049;
+  --jf-divider: #212529;
+  --jf-text-2: #c8ced4;
+
+  /* ── Pipeline stages (T78) — dark ──────────────────── */
+  --jf-stage-new: #4a93e8;
+  --jf-stage-shortlist: #bc8430;
+  --jf-stage-applied: #9a7be0;
+  --jf-stage-replied: #d4708f;
+  --jf-stage-out: #828b94;
+
+  /* ── Pipeline stage bands (T99) — dark. Each is `--jf-stage-*` pre-
+   * blended at alpha 0.14 over `--jf-surface-2` (the board column's own
+   * background) and stored as a literal hex rather than `rgba()` —
+   * `scripts/check_theme_contrast.py`'s `luminance()` only parses a
+   * literal `#rrggbb`, so an `rgba()` tint is invisible to contrast
+   * grading (the exact "a check that passes because it never reaches
+   * the thing it names" failure the product spec already lists six of).
+   * These five back `.board-column-header`'s tinted band, which carries
+   * the existing `--jf-text`/`--jf-dim` header text — both are graded
+   * against these five surfaces by `scripts/check_text_role_contrast.py`
+   * (its `EXTRA_SURFACE_TOKENS` discovery), not left ungraded as a
+   * seventh case. */
+  --jf-stage-new-band: #182533;
+  --jf-stage-shortlist-band: #28231a;
+  --jf-stage-applied-band: #232232;
+  --jf-stage-replied-band: #2b2027;
+  --jf-stage-out-band: #202428;
+
+  /* ── Fit ramp — four neutral steps, top step inverted (T78) — dark */
+  --jf-fit-0-bg: #22262b;
+  --jf-fit-0-fg: #a0a7af;
+  --jf-fit-1-bg: #2c3238;
+  --jf-fit-1-fg: #c8ced4;
+  --jf-fit-2-bg: #3a424a;
+  --jf-fit-2-fg: #eceef0;
+  --jf-fit-3-bg: #eceef0;
+  --jf-fit-3-fg: #0d0f11;
+
+  /* ── Support (T78) — dark ─────────────────────────────────────────  */
+  --jf-accent-hover: #6fa9ee;
+  --jf-accent-fg: #0d0f11;
+  --jf-accent-tint: rgba(74, 147, 232, 0.16);
+  --jf-accent-soft: rgba(74, 147, 232, 0.08);
+  --jf-accent-border: rgba(74, 147, 232, 0.45);
+  --jf-warn-tint: rgba(212, 160, 74, 0.15);
+  --jf-good-tint: rgba(63, 191, 142, 0.15);
+  --jf-shadow: rgba(0, 0, 0, 0.5);
+  --jf-shadow-weak: rgba(0, 0, 0, 0.35);
+  --jf-scrim: rgba(5, 7, 9, 0.72);
+  --jf-bad-hover: #ec8f98;
+
+  /* ── Surfaces (pre-T56, unmigrated components) ───────────────────── */
+  --jf-bg: var(--jf-ground);
+  --jf-card: var(--jf-surface);
+  --jf-card-border: var(--jf-border);
+  --jf-card-hover: var(--jf-raised);
+
+  /* ── Header ────────────────────────────────────────────────────── */
+  --jf-hdr: var(--jf-surface);
+  --jf-hdr-line: var(--jf-border);
+
+  /* ── Text ──────────────────────────────────────────────────────── */
+  --jf-text-sub: var(--jf-dim);
+  --jf-text-dim: var(--jf-dim);
+
+  /* ── Inputs ────────────────────────────────────────────────────── */
+  --jf-input-bg: var(--jf-raised);
+  --jf-input-border: var(--jf-border);
+  --jf-input-focus: var(--jf-accent);
+
+  /* ── Buttons ───────────────────────────────────────────────────── */
+  --jf-btn-primary: var(--jf-accent);
+  --jf-btn-primary-h: var(--jf-accent-hover);
+  --jf-btn-primary-fg: var(--jf-accent-fg);
+  --jf-btn-secondary: var(--jf-raised);
+  --jf-btn-secondary-h: var(--jf-border-strong);
+  --jf-btn-secondary-fg: var(--jf-text);
+  --jf-btn-danger: var(--jf-bad);
+  --jf-btn-danger-h: var(--jf-bad-hover);
+  --jf-btn-danger-fg: var(--jf-accent-fg);
+  --jf-btn-action: var(--jf-accent);
+  --jf-btn-action-h: var(--jf-accent-hover);
+  --jf-btn-action-fg: var(--jf-accent-fg);
+
+  /* ── Tabs ──────────────────────────────────────────────────────── */
+  --jf-tab-active: var(--jf-raised);
+  --jf-tab-active-fg: var(--jf-text);
+  --jf-tab-inactive-fg: var(--jf-dim);
+
+  /* ── Score badge colours ───────────────────────────────────────── */
+  --jf-score-strong: var(--jf-good);
+  --jf-score-good: var(--jf-accent);
+  --jf-score-fair: var(--jf-warn);
+  --jf-score-weak: var(--jf-bad);
+
+  /* ── Skill / tag chip colours ──────────────────────────────────── */
+  --jf-tag-skill-bg: var(--jf-good-tint);
+  --jf-tag-skill-fg: var(--jf-good);
+  --jf-tag-remote-bg: var(--jf-raised);
+  --jf-tag-remote-fg: var(--jf-text-2);
+  --jf-tag-hybrid-bg: var(--jf-raised);
+  --jf-tag-hybrid-fg: var(--jf-text-2);
+  --jf-tag-onsite-bg: var(--jf-raised);
+  --jf-tag-onsite-fg: var(--jf-text-2);
+  --jf-tag-warn-bg: var(--jf-warn-tint);
+  --jf-tag-warn-fg: var(--jf-warn);
+}
+
+/* OS prefers light, and nothing has explicitly forced dark. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    /* T64 type scale — theme-independent, duplicated here per the
+       top-level :root block's own comment. */
+    --jf-font-row-title: clamp(13px, calc(9.57px + 0.446vw), 21px);
+    --jf-font-meta: clamp(12px, calc(9.14px + 0.268vw), 16px);
+    --jf-font-body: clamp(13px, calc(9.86px + 0.357vw), 19px);
+    --jf-font-page-title: clamp(22px, calc(15.71px + 0.714vw), 34px);
+
+    --jf-ground: #fafaf9;
+    --jf-surface: #ffffff;
+    --jf-raised: #f1f2f3;
+    --jf-border: #e0e3e6;
+    --jf-text: #15181b;
+    --jf-dim: #585f66;
+    --jf-accent: #1f6fbf;
+    --jf-good: #0e7a5a;
+    --jf-warn: #8a5a14;
+    --jf-bad: #b3261e;
+
+    /* ── Shell (T78) — light ──────────────────────────── */
+    --jf-surface-2: #f4f5f6;
+    --jf-border-strong: #c7ccd1;
+    --jf-divider: #ebedef;
+    --jf-text-2: #3f474e;
+
+    /* ── Pipeline stages (T78) — light ─────────────────── */
+    --jf-stage-new: #1f6fbf;
+    --jf-stage-shortlist: #8a5a14;
+    --jf-stage-applied: #6b4bbf;
+    --jf-stage-replied: #a83a63;
+    --jf-stage-out: #626b74;
+
+    /* ── Pipeline stage bands (T99) — light. Same alpha-0.14-over-
+     * `--jf-surface-2` pre-blend as dark's block above (comment there),
+     * re-stepped against light's own surface rather than inverted
+     * */
+    --jf-stage-new-band: #d6e2ee;
+    --jf-stage-shortlist-band: #e5dfd6;
+    --jf-stage-applied-band: #e1ddee;
+    --jf-stage-replied-band: #e9dbe1;
+    --jf-stage-out-band: #e0e2e4;
+
+    /* ── Fit ramp — four neutral steps, top step inverted (T78) — light */
+    --jf-fit-0-bg: #edeff1;
+    --jf-fit-0-fg: #5a626a;
+    --jf-fit-1-bg: #e1e5e8;
+    --jf-fit-1-fg: #3f474e;
+    --jf-fit-2-bg: #cfd5da;
+    --jf-fit-2-fg: #15181b;
+    --jf-fit-3-bg: #15181b;
+    --jf-fit-3-fg: #ffffff;
+
+    /* ── Support (T78) — light ────────────────────────────────────────  */
+    --jf-accent-hover: #1a5ea3;
+    --jf-accent-fg: #ffffff;
+    --jf-accent-tint: rgba(31, 111, 191, 0.12);
+    --jf-accent-soft: rgba(31, 111, 191, 0.06);
+    --jf-accent-border: rgba(31, 111, 191, 0.4);
+    --jf-warn-tint: rgba(138, 90, 20, 0.12);
+    --jf-good-tint: rgba(14, 122, 90, 0.12);
+    --jf-shadow: rgba(16, 24, 32, 0.18);
+    --jf-shadow-weak: rgba(16, 24, 32, 0.12);
+    --jf-scrim: rgba(21, 24, 27, 0.42);
+    --jf-bad-hover: #9c231d;
+
+    --jf-bg: var(--jf-ground);
+    --jf-card: var(--jf-surface);
+    --jf-card-border: var(--jf-border);
+    --jf-card-hover: var(--jf-raised);
+
+    --jf-hdr: var(--jf-surface);
+    --jf-hdr-line: var(--jf-border);
+
+    --jf-text-sub: var(--jf-dim);
+    --jf-text-dim: var(--jf-dim);
+
+    --jf-input-bg: var(--jf-raised);
+    --jf-input-border: var(--jf-border);
+    --jf-input-focus: var(--jf-accent);
+
+    --jf-btn-primary: var(--jf-accent);
+    --jf-btn-primary-h: var(--jf-accent-hover);
+    --jf-btn-primary-fg: var(--jf-accent-fg);
+    --jf-btn-secondary: var(--jf-raised);
+    --jf-btn-secondary-h: var(--jf-border-strong);
+    --jf-btn-secondary-fg: var(--jf-text);
+    --jf-btn-danger: var(--jf-bad);
+    --jf-btn-danger-h: var(--jf-bad-hover);
+    --jf-btn-danger-fg: var(--jf-accent-fg);
+    --jf-btn-action: var(--jf-accent);
+    --jf-btn-action-h: var(--jf-accent-hover);
+    --jf-btn-action-fg: var(--jf-accent-fg);
+
+    --jf-tab-active: var(--jf-raised);
+    --jf-tab-active-fg: var(--jf-text);
+    --jf-tab-inactive-fg: var(--jf-dim);
+
+    --jf-score-strong: var(--jf-good);
+    --jf-score-good: var(--jf-accent);
+    --jf-score-fair: var(--jf-warn);
+    --jf-score-weak: var(--jf-bad);
+
+    --jf-tag-skill-bg: var(--jf-good-tint);
+    --jf-tag-skill-fg: var(--jf-good);
+    --jf-tag-remote-bg: var(--jf-raised);
+    --jf-tag-remote-fg: var(--jf-text-2);
+    --jf-tag-hybrid-bg: var(--jf-raised);
+    --jf-tag-hybrid-fg: var(--jf-text-2);
+    --jf-tag-onsite-bg: var(--jf-raised);
+    --jf-tag-onsite-fg: var(--jf-text-2);
+    --jf-tag-warn-bg: var(--jf-warn-tint);
+    --jf-tag-warn-fg: var(--jf-warn);
+  }
+}
+
+/* Explicit override (config.ui.theme === "dark"), regardless of OS. */
+:root[data-theme="dark"] {
+  /* T64 type scale — theme-independent, duplicated here per the
+     top-level :root block's own comment. */
+  --jf-font-row-title: clamp(13px, calc(9.57px + 0.446vw), 21px);
+  --jf-font-meta: clamp(12px, calc(9.14px + 0.268vw), 16px);
+  --jf-font-body: clamp(13px, calc(9.86px + 0.357vw), 19px);
+  --jf-font-page-title: clamp(22px, calc(15.71px + 0.714vw), 34px);
+
+  --jf-ground: #0d0f11;
+  --jf-surface: #15181b;
+  --jf-raised: #1d2126;
+  --jf-border: #2a2f35;
+  --jf-text: #eceef0;
+  --jf-dim: #a0a7af;
+  --jf-accent: #4a93e8;
+  --jf-good: #3fbf8e;
+  --jf-warn: #d4a04a;
+  --jf-bad: #e8808a;
+
+  /* ── Shell (T78) — dark ────────────────────────────── */
+  --jf-surface-2: #101316;
+  --jf-border-strong: #3a4049;
+  --jf-divider: #212529;
+  --jf-text-2: #c8ced4;
+
+  /* ── Pipeline stages (T78) — dark ──────────────────── */
+  --jf-stage-new: #4a93e8;
+  --jf-stage-shortlist: #bc8430;
+  --jf-stage-applied: #9a7be0;
+  --jf-stage-replied: #d4708f;
+  --jf-stage-out: #828b94;
+
+  /* ── Pipeline stage bands (T99) — dark. Each is `--jf-stage-*` pre-
+   * blended at alpha 0.14 over `--jf-surface-2` (the board column's own
+   * background) and stored as a literal hex rather than `rgba()` —
+   * `scripts/check_theme_contrast.py`'s `luminance()` only parses a
+   * literal `#rrggbb`, so an `rgba()` tint is invisible to contrast
+   * grading (the exact "a check that passes because it never reaches
+   * the thing it names" failure the product spec already lists six of).
+   * These five back `.board-column-header`'s tinted band, which carries
+   * the existing `--jf-text`/`--jf-dim` header text — both are graded
+   * against these five surfaces by `scripts/check_text_role_contrast.py`
+   * (its `EXTRA_SURFACE_TOKENS` discovery), not left ungraded as a
+   * seventh case. */
+  --jf-stage-new-band: #182533;
+  --jf-stage-shortlist-band: #28231a;
+  --jf-stage-applied-band: #232232;
+  --jf-stage-replied-band: #2b2027;
+  --jf-stage-out-band: #202428;
+
+  /* ── Fit ramp — four neutral steps, top step inverted (T78) — dark */
+  --jf-fit-0-bg: #22262b;
+  --jf-fit-0-fg: #a0a7af;
+  --jf-fit-1-bg: #2c3238;
+  --jf-fit-1-fg: #c8ced4;
+  --jf-fit-2-bg: #3a424a;
+  --jf-fit-2-fg: #eceef0;
+  --jf-fit-3-bg: #eceef0;
+  --jf-fit-3-fg: #0d0f11;
+
+  /* ── Support (T78) — dark ─────────────────────────────────────────  */
+  --jf-accent-hover: #6fa9ee;
+  --jf-accent-fg: #0d0f11;
+  --jf-accent-tint: rgba(74, 147, 232, 0.16);
+  --jf-accent-soft: rgba(74, 147, 232, 0.08);
+  --jf-accent-border: rgba(74, 147, 232, 0.45);
+  --jf-warn-tint: rgba(212, 160, 74, 0.15);
+  --jf-good-tint: rgba(63, 191, 142, 0.15);
+  --jf-shadow: rgba(0, 0, 0, 0.5);
+  --jf-shadow-weak: rgba(0, 0, 0, 0.35);
+  --jf-scrim: rgba(5, 7, 9, 0.72);
+  --jf-bad-hover: #ec8f98;
+
+  --jf-bg: var(--jf-ground);
+  --jf-card: var(--jf-surface);
+  --jf-card-border: var(--jf-border);
+  --jf-card-hover: var(--jf-raised);
+
+  --jf-hdr: var(--jf-surface);
+  --jf-hdr-line: var(--jf-border);
+
+  --jf-text-sub: var(--jf-dim);
+  --jf-text-dim: var(--jf-dim);
+
+  --jf-input-bg: var(--jf-raised);
+  --jf-input-border: var(--jf-border);
+  --jf-input-focus: var(--jf-accent);
+
+  --jf-btn-primary: var(--jf-accent);
+  --jf-btn-primary-h: var(--jf-accent-hover);
+  --jf-btn-primary-fg: var(--jf-accent-fg);
+  --jf-btn-secondary: var(--jf-raised);
+  --jf-btn-secondary-h: var(--jf-border-strong);
+  --jf-btn-secondary-fg: var(--jf-text);
+  --jf-btn-danger: var(--jf-bad);
+  --jf-btn-danger-h: var(--jf-bad-hover);
+  --jf-btn-danger-fg: var(--jf-accent-fg);
+  --jf-btn-action: var(--jf-accent);
+  --jf-btn-action-h: var(--jf-accent-hover);
+  --jf-btn-action-fg: var(--jf-accent-fg);
+
+  --jf-tab-active: var(--jf-raised);
+  --jf-tab-active-fg: var(--jf-text);
+  --jf-tab-inactive-fg: var(--jf-dim);
+
+  --jf-score-strong: var(--jf-good);
+  --jf-score-good: var(--jf-accent);
+  --jf-score-fair: var(--jf-warn);
+  --jf-score-weak: var(--jf-bad);
+
+  --jf-tag-skill-bg: var(--jf-good-tint);
+  --jf-tag-skill-fg: var(--jf-good);
+  --jf-tag-remote-bg: var(--jf-raised);
+  --jf-tag-remote-fg: var(--jf-text-2);
+  --jf-tag-hybrid-bg: var(--jf-raised);
+  --jf-tag-hybrid-fg: var(--jf-text-2);
+  --jf-tag-onsite-bg: var(--jf-raised);
+  --jf-tag-onsite-fg: var(--jf-text-2);
+  --jf-tag-warn-bg: var(--jf-warn-tint);
+  --jf-tag-warn-fg: var(--jf-warn);
+}
+
+/* Explicit override (config.ui.theme === "light"), always wins even if
+   the OS prefers dark — same block as the media-query override above,
+   restated for clarity under an explicit attribute selector so a
+   `data-theme="light"` page never depends on the OS leaving the
+   un-prefixed :root block alone. */
+:root[data-theme="light"] {
+  /* T64 type scale — theme-independent, duplicated here per the
+     top-level :root block's own comment. */
+  --jf-font-row-title: clamp(13px, calc(9.57px + 0.446vw), 21px);
+  --jf-font-meta: clamp(12px, calc(9.14px + 0.268vw), 16px);
+  --jf-font-body: clamp(13px, calc(9.86px + 0.357vw), 19px);
+  --jf-font-page-title: clamp(22px, calc(15.71px + 0.714vw), 34px);
+
+  --jf-ground: #fafaf9;
+  --jf-surface: #ffffff;
+  --jf-raised: #f1f2f3;
+  --jf-border: #e0e3e6;
+  --jf-text: #15181b;
+  --jf-dim: #585f66;
+  --jf-accent: #1f6fbf;
+  --jf-good: #0e7a5a;
+  --jf-warn: #8a5a14;
+  --jf-bad: #b3261e;
+
+  /* ── Shell (T78) — light ──────────────────────────── */
+  --jf-surface-2: #f4f5f6;
+  --jf-border-strong: #c7ccd1;
+  --jf-divider: #ebedef;
+  --jf-text-2: #3f474e;
+
+  /* ── Pipeline stages (T78) — light ─────────────────── */
+  --jf-stage-new: #1f6fbf;
+  --jf-stage-shortlist: #8a5a14;
+  --jf-stage-applied: #6b4bbf;
+  --jf-stage-replied: #a83a63;
+  --jf-stage-out: #626b74;
+
+  /* ── Pipeline stage bands (T99) — light. Same alpha-0.14-over-
+   * `--jf-surface-2` pre-blend as dark's block above (comment there),
+   * re-stepped against light's own surface rather than inverted
+   * */
+  --jf-stage-new-band: #d6e2ee;
+  --jf-stage-shortlist-band: #e5dfd6;
+  --jf-stage-applied-band: #e1ddee;
+  --jf-stage-replied-band: #e9dbe1;
+  --jf-stage-out-band: #e0e2e4;
+
+  /* ── Fit ramp — four neutral steps, top step inverted (T78) — light */
+  --jf-fit-0-bg: #edeff1;
+  --jf-fit-0-fg: #5a626a;
+  --jf-fit-1-bg: #e1e5e8;
+  --jf-fit-1-fg: #3f474e;
+  --jf-fit-2-bg: #cfd5da;
+  --jf-fit-2-fg: #15181b;
+  --jf-fit-3-bg: #15181b;
+  --jf-fit-3-fg: #ffffff;
+
+  /* ── Support (T78) — light ────────────────────────────────────────  */
+  --jf-accent-hover: #1a5ea3;
+  --jf-accent-fg: #ffffff;
+  --jf-accent-tint: rgba(31, 111, 191, 0.12);
+  --jf-accent-soft: rgba(31, 111, 191, 0.06);
+  --jf-accent-border: rgba(31, 111, 191, 0.4);
+  --jf-warn-tint: rgba(138, 90, 20, 0.12);
+  --jf-good-tint: rgba(14, 122, 90, 0.12);
+  --jf-shadow: rgba(16, 24, 32, 0.18);
+  --jf-shadow-weak: rgba(16, 24, 32, 0.12);
+  --jf-scrim: rgba(21, 24, 27, 0.42);
+  --jf-bad-hover: #9c231d;
+
+  --jf-bg: var(--jf-ground);
+  --jf-card: var(--jf-surface);
+  --jf-card-border: var(--jf-border);
+  --jf-card-hover: var(--jf-raised);
+
+  --jf-hdr: var(--jf-surface);
+  --jf-hdr-line: var(--jf-border);
+
+  --jf-text-sub: var(--jf-dim);
+  --jf-text-dim: var(--jf-dim);
+
+  --jf-input-bg: var(--jf-raised);
+  --jf-input-border: var(--jf-border);
+  --jf-input-focus: var(--jf-accent);
+
+  --jf-btn-primary: var(--jf-accent);
+  --jf-btn-primary-h: var(--jf-accent-hover);
+  --jf-btn-primary-fg: var(--jf-accent-fg);
+  --jf-btn-secondary: var(--jf-raised);
+  --jf-btn-secondary-h: var(--jf-border-strong);
+  --jf-btn-secondary-fg: var(--jf-text);
+  --jf-btn-danger: var(--jf-bad);
+  --jf-btn-danger-h: var(--jf-bad-hover);
+  --jf-btn-danger-fg: var(--jf-accent-fg);
+  --jf-btn-action: var(--jf-accent);
+  --jf-btn-action-h: var(--jf-accent-hover);
+  --jf-btn-action-fg: var(--jf-accent-fg);
+
+  --jf-tab-active: var(--jf-raised);
+  --jf-tab-active-fg: var(--jf-text);
+  --jf-tab-inactive-fg: var(--jf-dim);
+
+  --jf-score-strong: var(--jf-good);
+  --jf-score-good: var(--jf-accent);
+  --jf-score-fair: var(--jf-warn);
+  --jf-score-weak: var(--jf-bad);
+
+  --jf-tag-skill-bg: var(--jf-good-tint);
+  --jf-tag-skill-fg: var(--jf-good);
+  --jf-tag-remote-bg: var(--jf-raised);
+  --jf-tag-remote-fg: var(--jf-text-2);
+  --jf-tag-hybrid-bg: var(--jf-raised);
+  --jf-tag-hybrid-fg: var(--jf-text-2);
+  --jf-tag-onsite-bg: var(--jf-raised);
+  --jf-tag-onsite-fg: var(--jf-text-2);
+  --jf-tag-warn-bg: var(--jf-warn-tint);
+  --jf-tag-warn-fg: var(--jf-warn);
+}
+
+body {
+  background: var(--jf-bg);
+  color: var(--jf-text);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}

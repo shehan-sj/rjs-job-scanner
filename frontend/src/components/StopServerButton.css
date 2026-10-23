@@ -1,0 +1,59 @@
+/* Stop control (T34). Colours come from the theme tokens
+   (frontend/src/theme/tokens.css) so light/dark and the explicit
+   data-theme override both work without a second definition here.
+   `.app-shell-trigger` used to be defined in the old App.css alongside
+   the floating trigger strip it, Settings and FillerBot shared; T60
+   moved all three into the rail (Rail.css's own `.rail-foot-btn`) except
+   this one, which keeps its own small button style here since the
+   confirm/quit pair needs slightly different sizing than the rail's
+   other foot buttons. */
+.app-shell-trigger {
+  background: var(--jf-btn-secondary);
+  color: var(--jf-btn-secondary-fg);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.app-shell-trigger:hover {
+  background: var(--jf-btn-secondary-h);
+}
+
+.stop-server-confirm,
+.stop-server-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--jf-text-sub);
+}
+
+.stop-server-prompt {
+  white-space: nowrap;
+}
+
+.stop-server-result {
+  max-width: 320px;
+  text-align: right;
+}
+
+/* Only the destructive half of the confirm pair is red — the button that
+   opens the confirm is not, so the shell's three triggers read as equals
+   until the user has actually committed to quitting. */
+.stop-server-danger {
+  background: var(--jf-btn-danger);
+  color: var(--jf-btn-danger-fg);
+}
+
+.stop-server-danger:hover:not(:disabled) {
+  background: var(--jf-btn-danger-h);
+}
+
+.stop-server-danger:disabled {
+  cursor: default;
+  opacity: 0.7;
+}

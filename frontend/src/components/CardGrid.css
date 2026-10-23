@@ -1,0 +1,47 @@
+/* Replaces v3's `ResponsiveCardGrid` (see CardGrid.tsx).
+ *
+ * The floor is 380px, NOT v3's 690px. That 690 came from the Qt widget's
+ * action row, and it made sense there: the widget was a narrow floating panel
+ * a few hundred pixels wide, so one roomy column was the whole point. On a
+ * full browser window the same floor stops the grid tiling at all — at a
+ * 1400px viewport `minmax(690px, 1fr)` resolves to a single 1360px-wide card
+ * stretched across the screen, which is faithful to v3's arithmetic and wrong
+ * for this context.
+ *
+ * 380px is what the card actually needs, rather than what the old window
+ * needed: the action row is `flex-wrap: wrap` and the content column is
+ * `min-width: 0`, so the four buttons fall to two rows and nothing clips.
+ * Resulting columns: 1 below ~790px, 3 at 1400px, 4 at 1920px, more on wider
+ * displays. Deliberate deviation from the product spec's port-faithfully rule,
+ * requested by the owner; recorded in the product spec.
+ */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 16px;
+  padding: 16px 20px 32px;
+  width: 100%;
+  box-sizing: border-box;
+  align-content: start;
+}
+
+/* Below the floor a single track would overflow a narrow phone viewport, so
+ * drop to a plain single column and let the card shrink instead. */
+@media (max-width: 420px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+    padding: 12px 12px 24px;
+  }
+}
+
+/* T58 — Rows density. See CardGrid.tsx's `compact` prop doc. */
+.card-grid-compact {
+  gap: 6px;
+  padding: 10px 20px 24px;
+}
+
+@media (max-width: 420px) {
+  .card-grid-compact {
+    padding: 8px 12px 16px;
+  }
+}

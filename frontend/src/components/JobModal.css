@@ -1,0 +1,17 @@
+/* T100 — the modal's own container chrome only. `JobPanel.css`'s rules
+ * (imported by JobPanel.tsx itself) are the panel's *contents* and stay
+ * untouched; this file just resets the browser's default `<dialog>`
+ * box and adds the backdrop, since `JobPanel.css`'s `.job-panel` rule
+ * now supplies the floating box's own sizing (JobPanel.css). */
+dialog.job-modal {
+  padding: 0;
+  margin: auto;
+  border: none;
+  background: transparent;
+  max-width: none;
+  max-height: none;
+}
+
+dialog.job-modal::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}

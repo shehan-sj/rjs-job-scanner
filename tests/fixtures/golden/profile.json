@@ -1,0 +1,71 @@
+{
+  "skills": [
+    "test automation",
+    "selenium",
+    "cypress",
+    "api testing",
+    "regression testing",
+    "ci/cd",
+    "bdd",
+    "cucumber",
+    "postman",
+    "jira",
+    "test planning",
+    "performance testing",
+    "manual testing",
+    "exploratory testing",
+    "agile testing"
+  ],
+  "tools": [
+    "Selenium",
+    "Cypress",
+    "Postman",
+    "JIRA",
+    "Jenkins",
+    "Docker",
+    "AWS",
+    "Git",
+    "TestRail",
+    "BrowserStack"
+  ],
+  "job_titles": [
+    "QA Engineer",
+    "Senior QA Engineer",
+    "SDET",
+    "QA Lead",
+    "Automation Engineer",
+    "Test Automation Engineer",
+    "Quality Engineer"
+  ],
+  "domains": [
+    "SaaS",
+    "fintech",
+    "API testing"
+  ],
+  "seniority_levels": [
+    "Senior",
+    "Lead"
+  ],
+  "keywords": [
+    "test strategy",
+    "quality processes",
+    "automation framework",
+    "agile testing",
+    "shift-left testing"
+  ],
+  "years_experience": 7,
+  "target_job_functions": [
+    "Quality Assurance",
+    "Engineering"
+  ],
+  "target_seniority_min": 4,
+  "target_seniority_max": 10,
+  "target_industries": [],
+  "avoid_industries": [
+    "Staffing and Recruiting"
+  ],
+  "source_path": "",
+  "source_mtime": 0.0,
+  "generated_at": "",
+  "profile_version": ""
+}

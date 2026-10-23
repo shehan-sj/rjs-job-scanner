@@ -1,0 +1,45 @@
+.tab-bar {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 16px;
+}
+
+/* T65 (d) — inline next to the page title now (JobsView.tsx's header
+   row), not its own centred row below it; `justify-content: flex-start`
+   overrides the base `.tab-bar`'s `center` (still right for its other
+   caller, SettingsView's full-width main tab bar), and the padding drops
+   to match the title/count it now sits beside. */
+.tab-bar-sub {
+  padding: 0;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--jf-tab-inactive-fg);
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.tab-btn-main {
+  padding: 8px 14px;
+  font-size: 14px;
+}
+
+.tab-btn-sub {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.tab-btn.active {
+  background: var(--jf-tab-active);
+  color: var(--jf-tab-active-fg);
+}
+
+.tab-btn:not(.active):hover {
+  background: var(--jf-card-hover);
+}

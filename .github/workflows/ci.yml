@@ -1,0 +1,147 @@
+# Tests-only CI. One Linux job, no builds, no releases, no artifacts.
+#
+# ─ Why this exists when 6e44ff9 deleted a workflow ───────────────────────────
+#
+# 6e44ff9 ("Remove GitHub Actions build workflow") deleted
+# .github/workflows/build-installers.yml and gave two reasons:
+#
+#   1. macOS runners "draw down the Actions quota at 10x" on a private repo.
+#   2. The workflow's `push: tags: v*` trigger "meant tagging a release would
+#      start a run without being asked for, which is not wanted".
+#
+# Both are properties of an *installer build*. The 10x cost was a macOS runner
+# producing a DMG, and the tag trigger existed because the workflow's output
+# was release artifacts. The Qt -> web migration deleted that build chain: T33
+# removed build.py, the PyInstaller specs and the Inno Setup chain, and T34's
+# replacement one-dir build is a local, by-hand `python scripts/build_app.py`
+# that no workflow invokes.
+#
+# This workflow produces nothing to publish:
+#
+#   * one `ubuntu-latest` job. No macOS, no Windows, so no 10x multiplier and
+#     no matrix.
+#   * no tag trigger. It runs on pushes to main and on pull requests targeting
+#     main - events the owner is already deliberately creating - plus a manual
+#     `workflow_dispatch`, which by definition cannot start a run unasked.
+#   * `npm run build` here is the frontend type-check-and-bundle that the SPA
+#     tests need in order to run at all (see the step ordering note below). It
+#     is not an installer and nothing is uploaded.
+#
+# So neither of 6e44ff9's two reasons applies, and the thing it objected to -
+# expensive, unasked-for installer builds - is not what this does.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Read-only token: this job never writes to the repo, comments on a PR, or
+# publishes a package.
+permissions:
+  contents: read
+
+# A second push to the same branch supersedes the first. Cancelling the stale
+# run is the main quota-saving lever left once the matrix is gone.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ruff + frontend build + pytest (Linux)
+    runs-on: ubuntu-latest
+    # The suite is ~30s locally; 10 minutes is a backstop against a test that
+    # waits on something that never arrives, so a hang costs minutes of quota
+    # rather than the 6-hour default.
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # pyproject.toml declares requires-python >=3.12, so 3.12 is the floor we
+      # claim to support and therefore the version worth testing. Development
+      # happens on 3.14; if 3.12 ever breaks, that is a real finding about the
+      # claim in pyproject.toml, not a CI misconfiguration.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      # `node-version: 20` resolves to the latest 20.x. That matters: vite,
+      # rolldown, oxlint and @vitejs/plugin-react all declare
+      # engines.node ^20.19.0 || >=22.12.0, so 20.19+ is required and an
+      # earlier 20.x would be out of range.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pytest 'ruff==0.17.1'
+        # Two deliberate omissions:
+        #
+        # * python-jobspy. setup.sh installs it with --no-deps to bypass its
+        #   numpy==1.26.3 pin. The suite does not need it: jobspy_source.py
+        #   imports it lazily inside functions, and tests/test_smoke.py exists
+        #   precisely to assert the package imports without it.
+        # * Playwright browsers. No `playwright install` step, which is what
+        #   keeps the one headed-Chromium end-to-end test
+        #   (test_fillerbot_engine.py::test_fill_session_runs_end_to_end_against_local_fixture_form)
+        #   skipped. That test is skipif-guarded on find_chrome_exe(), which
+        #   only ever looks for <dir>/chrome-win64/chrome.exe under ./browsers
+        #   or %LOCALAPPDATA%\ms-playwright - a Windows-only layout and a
+        #   Windows-only env var - so on Linux it returns None whether or not a
+        #   browser is present. Installing browsers here would not un-skip it;
+        #   it would only cost download time.
+        #
+        # ruff is pinned exactly. ruff format's output is version-dependent by
+        # design, so an unpinned ruff lets an upstream release turn a green tree
+        # red with no commit of ours. Bumping it should be a deliberate commit
+        # that also reformats.
+
+      - name: ruff check
+        run: ruff check .
+
+      - name: ruff format --check
+        run: ruff format --check .
+
+      # Frontend build runs BEFORE pytest, which inverts the order in the T36
+      # task row. The row's order (pytest, then npm ci, then npm run build)
+      # does not fail - nothing hard-errors on a missing frontend/dist - but it
+      # quietly weakens the gate: frontend/dist is git-ignored, so on a fresh
+      # checkout tests/test_web_spa.py's 6 @requires_dist tests all skip, and
+      # every assertion about the app serving the built SPA (index.html at /,
+      # the hashed asset bundle, the API not being shadowed by the SPA
+      # fallback) is skipped with it. Those are exactly the T34 regressions
+      # worth catching. Building first costs nothing and makes them run.
+      #
+      # `npm ci` depends on frontend/package.json keeping its `overrides` entry
+      # (openapi-typescript -> typescript: $typescript). The lockfile resolves
+      # typescript to 6.0.3 while openapi-typescript@7.13.0 peer-requires ^5.x,
+      # so without the override npm 11 refuses the tree outright:
+      # "ERESOLVE could not resolve / Conflicting peer dependency:
+      # typescript@5.9.3". Verified both ways locally with `npm ci --dry-run` -
+      # the override is the only difference between a tree that installs and
+      # one that does not. Dropping it to "clean up" package.json, or
+      # regenerating the lock without it, breaks this step and nothing else
+      # warns you first.
+      - name: npm ci
+        working-directory: frontend
+        run: npm ci
+
+      - name: npm run build
+        working-directory: frontend
+        run: npm run build
+
+      - name: pytest
+        run: pytest -q
+        timeout-minutes: 5

@@ -1,0 +1,48 @@
+# This is a template. Copy it to config.yaml and fill in your own values.
+# config.yaml is local-only and is never committed to git (see .gitignore).
+check_interval_minutes: 20
+match_threshold: 65
+filter_reposts: true
+filter_contracts: true
+location_filter:
+  # No geographic default on purpose: these are filled in from your resume,
+  # or by hand. The product spec - a baked-in country made an install search one
+  # place while the in-memory defaults claimed another.
+  preferred_regions:
+  search_country:
+  remote_ok_worldwide: true
+tag_visibility:
+  hide_full_time: false
+  hide_part_time: true
+  hide_contract: true
+  hide_temporary: true
+  hide_internship: true
+  hide_remote: false
+  hide_hybrid: false
+  hide_onsite: false
+agentic_filter:
+  enabled: true
+  min_local_score: 65
+resume:
+  path:
+anthropic:
+  api_key:
+  model: claude-haiku-4-5
+sources:
+- name: linkedin
+  enabled: true
+  site_names:
+  - linkedin
+  search_terms:
+  # Blank on purpose - fill in your own country or city. Left empty, the
+  # source is searched without a location filter.
+  location:
+  results_wanted: 50
+  hours_old: 24
+  slow_mo: 1.5
+  linkedin_fetch_description: true
+notifications:
+  auto_dismiss_seconds: 0
+ui:
+  show_log_console: false
+  theme: dark

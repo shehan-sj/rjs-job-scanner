@@ -1,0 +1,66 @@
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+# Phase 0 (T2) carved out the code the Qt -> web migration was going to
+# delete anyway — jobfinder/ui/, main.py, build.py and the two PyInstaller
+# specs — so that adopting ruff did not mean a ~10,000-line mechanical
+# reformat of doomed code. T33 has now deleted all of it, so those
+# exclusions are gone: ruff sees the whole source tree. The one surviving
+# fragment of that package, the Python palette module, was itself retired
+# by T56 once CSS became the palette's source of truth.
+#
+# `.harness-worktrees/` and `.harness/` stay excluded, and are not migration
+# leftovers: they hold duplicate checkouts used for local scratch work.
+# Without them ruff lints every file twice, and in-progress unformatted code
+# in a scratch checkout makes `ruff check .` on THIS tree fail for reasons
+# unrelated to this tree — a non-deterministic gate.
+extend-exclude = [
+    ".harness-worktrees",
+    ".harness",
+]
+
+[tool.ruff.lint]
+# Deliberately narrow starting rule set: pyflakes (F) + pycodestyle errors (E).
+# This catches real bugs (unused imports/vars, undefined names, syntax issues)
+# without pulling in style rules (e.g. pydocstyle,
+# flake8-bugbear strictness) that would force edits across surviving modules
+# just to satisfy the linter. Rule set can be widened incrementally as new
+# code is added post-migration.
+select = ["E", "F"]
+ignore = [
+    "E501",  # line length handled by formatter / line-length setting above
+]
+
+[tool.ruff.format]
+# Default ruff formatter (black-compatible) for files in scope.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# T63: one orphaned pytest run already cost 3 hours, blocked in a Playwright
+# "run-driver" child with nothing to kill it. The whole suite runs in ~35s
+# and its single slowest test (test_fillerbot_engine.py's event-loop-offload
+# check) takes ~5s, so 30s is already ~6x that slowest test's own time while
+# still bounding a genuine hang (an infinite loop, a dropped socket with no
+# guard) to a fraction of a minute instead of running forever.
+timeout = 30
+
+[project]
+name = "jobfinder"
+version = "3.1.0"
+requires-python = ">=3.12"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    # T63: per-test timeout (see [tool.pytest.ini_options] below) — without
+    # it, a hang (an infinite loop, a dropped connection with no guard)
+    # blocks the whole run with nothing to kill it. Already cost one run
+    # 3 hours, orphaned in a Playwright "run-driver" child.
+    "pytest-timeout",
+    "ruff",
+    # Secret scanning. Installing the package is not enough — `pre-commit
+    # install` must also be run once per clone to write .git/hooks/pre-commit.
+    # See the comment block in .pre-commit-config.yaml.
+    "pre-commit",
+]

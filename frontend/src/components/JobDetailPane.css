@@ -1,0 +1,221 @@
+/* T64 — the split master-detail's detail pane (docs/DESIGN.md's
+ * "Superseded 2026-10-22" block): this is where the width goes. Fills
+ * whatever is left of the viewport once the rail, filter panel and
+ * 580px list have taken their share (JobsView.css). */
+.job-detail-pane {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 20px 32px;
+  background: var(--jf-card);
+  border: 1px solid var(--jf-card-border);
+  border-radius: 10px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.job-detail-pane-empty {
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+}
+
+/* T65 — Phone's back affordance (JobsView.css's two-screen media query,
+ * below, is what actually makes the detail pane its own full screen;
+ * this button is how you leave it). Hidden above the phone breakpoint,
+ * where list and detail already sit side by side and there's nothing to
+ * go back to. */
+.job-detail-back-btn {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .job-detail-back-btn {
+    display: inline-flex;
+    align-self: flex-start;
+    background: var(--jf-btn-secondary);
+    color: var(--jf-btn-secondary-fg);
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: var(--jf-font-meta);
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .job-detail-back-btn:hover {
+    background: var(--jf-btn-secondary-h);
+  }
+}
+
+.job-detail-empty-text {
+  margin: 0;
+  color: var(--jf-text-sub);
+  font-size: var(--jf-font-body);
+}
+
+.job-detail-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.job-detail-header .job-score-badge {
+  width: 48px;
+  height: 48px;
+  font-size: 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  flex-shrink: 0;
+}
+
+.job-detail-heading {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.job-detail-title {
+  margin: 0;
+  font-size: var(--jf-font-row-title);
+  line-height: 1.3;
+  font-weight: 700;
+  color: var(--jf-text);
+}
+
+.job-detail-meta {
+  margin: 0;
+  font-size: var(--jf-font-meta);
+  color: var(--jf-text-sub);
+}
+
+.job-detail-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.job-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.job-detail-section-title {
+  margin: 0;
+  font-size: var(--jf-font-meta);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--jf-text-dim);
+}
+
+.job-detail-why {
+  margin: 0;
+  font-size: var(--jf-font-body);
+  color: var(--jf-text-sub);
+}
+
+.job-detail-reasoning {
+  margin: 0;
+  font-size: var(--jf-font-body);
+  color: var(--jf-text);
+  line-height: 1.5;
+}
+
+.job-detail-gap-chip {
+  background: var(--jf-tag-warn-bg);
+  color: var(--jf-tag-warn-fg);
+}
+
+.job-detail-facts-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px 16px;
+}
+
+.job-detail-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.job-detail-fact-label {
+  font-size: var(--jf-font-meta);
+  color: var(--jf-text-dim);
+}
+
+.job-detail-fact-value {
+  margin: 0;
+  font-size: var(--jf-font-body);
+  color: var(--jf-text);
+  font-weight: 600;
+}
+
+/* ── Card action buttons ──────────────────────────────────────────────
+ * Moved here from `JobCardView.css` (T65, Lead fix). Applied and Removed
+ * left `JobCardView` for the shared shell, which made that component dead
+ * — every remaining reference to it is a comment — so its stylesheet
+ * stopped being imported and dropped out of the bundle entirely. The
+ * detail pane still used these classes, so "Open job" and "Company site"
+ * rendered as bare blue anchors and the buttons fell back to the browser
+ * default. Verified by grepping the built CSS: `.job-card-btn` matched
+ * zero times in `dist/assets/*.css`.
+ *
+ * Styles belong with the component that uses them, so they live here now
+ * rather than being rescued by re-importing a dead component's CSS.
+ *
+ * Sizes scaled up from the originals (12px text, 7px/12px padding) to the
+ * viewport-aware type scale and a 44px touch target — the owner's "tiny
+ * buttons all over the place" and `docs/DESIGN.md`'s >=44px rule. */
+.job-card-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: none;
+  border-radius: 10px;
+  padding: 0 16px;
+  font-size: var(--jf-font-body, 14px);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.job-card-btn-secondary {
+  background: var(--jf-btn-secondary);
+  color: var(--jf-btn-secondary-fg);
+}
+
+.job-card-btn-secondary:hover {
+  background: var(--jf-btn-secondary-h);
+}
+
+.job-card-btn-danger {
+  background: var(--jf-btn-danger);
+  color: var(--jf-btn-danger-fg);
+}
+
+.job-card-btn-danger:hover {
+  background: var(--jf-btn-danger-h);
+}
+
+.job-card-btn-action {
+  background: var(--jf-btn-action);
+  color: var(--jf-btn-action-fg);
+}
+
+.job-card-btn-action:hover {
+  background: var(--jf-btn-action-h);
+}
+
+.job-card-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

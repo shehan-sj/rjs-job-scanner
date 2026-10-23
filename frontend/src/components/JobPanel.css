@@ -1,0 +1,277 @@
+/* T83 — the job detail panel's own contents (reasoning, matched
+ * skills/gaps, facts grid, activity, "never show this company", the
+ * stage control). All colour/spacing tokens below are the live board
+ * family (`--jf-raised`/`--jf-border`/`--jf-divider`/`--jf-accent`/
+ * `--jf-stage-*`/`--jf-fit-*`, the product spec) — never the pre-T56
+ * `--jf-btn-*`/`job-detail-*` family `JobDetailPane.css` used, which
+ * the product spec's census found has no live consumer.
+ *
+ * T100 superseded the *container* this renders inside of — a sixth
+ * flex column beside `.board-columns` (`flex: 0 0 420px`, a left
+ * border to read as a seam between siblings) became a floating box
+ * inside `JobModal.tsx`'s `<dialog>` (JobModal.css owns the backdrop
+ * and the dialog's own box reset). The `.job-panel` rule below is that
+ * container change — sizing/elevation for a centered floating box
+ * instead of a fixed-width flex sibling — not a content change: every
+ * class below this one (`.job-panel-nav`, `.job-panel-stage-*`,
+ * `.job-panel-section`, etc.) is untouched by T100. */
+.job-panel {
+  width: min(560px, calc(100vw - 48px));
+  max-height: min(760px, calc(100vh - 64px));
+  overflow-y: auto;
+  padding: 16px 18px 24px;
+  border: 1px solid var(--jf-border);
+  border-radius: 14px;
+  background: var(--jf-surface-2);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.job-panel-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.job-panel-close {
+  border: none;
+  background: var(--jf-raised);
+  color: var(--jf-text);
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: var(--jf-font-meta);
+}
+
+.job-panel-position {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--jf-font-meta);
+  color: var(--jf-text-sub);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.job-panel-nav-btns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.job-panel-nav-btn {
+  border: 1px solid var(--jf-border);
+  background: var(--jf-raised);
+  color: var(--jf-text);
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.job-panel-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.job-panel-fit {
+  align-self: flex-start;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 12px;
+}
+
+.job-panel-fit-score {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.job-panel-fit-label {
+  font-size: var(--jf-font-meta);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.job-panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.job-panel-title {
+  margin: 0;
+  font-size: var(--jf-font-row-title);
+  font-weight: 650;
+  color: var(--jf-text);
+}
+
+.job-panel-meta {
+  margin: 0;
+  font-size: var(--jf-font-meta);
+  color: var(--jf-text-sub);
+}
+
+.job-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.job-panel-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: var(--jf-font-meta);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.job-panel-btn-primary {
+  background: var(--jf-btn-primary);
+  color: var(--jf-btn-primary-fg);
+}
+
+.job-panel-btn-secondary {
+  background: var(--jf-raised);
+  color: var(--jf-text);
+  border: 1px solid var(--jf-border);
+}
+
+.job-panel-btn-danger {
+  background: transparent;
+  color: var(--jf-bad);
+  border: 1px solid var(--jf-bad);
+}
+
+.job-panel-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* The stage control — five stops, one segmented control (the task
+ * brief: "the point of this task"). Each stop carries the stage's own
+ * swatch colour as a left accent so the active stop reads unambiguously
+ * against the other four even without relying on `aria-pressed` alone. */
+.job-panel-stage-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.job-panel-stage-btn {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--jf-border);
+  background: var(--jf-raised);
+  color: var(--jf-text-sub);
+  border-radius: 8px;
+  padding: 6px 4px;
+  font-size: var(--jf-font-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.job-panel-stage-btn[data-active="true"] {
+  background: var(--jf-accent-tint);
+  border-color: var(--jf-accent-border);
+  color: var(--jf-text);
+}
+
+.job-panel-stage-key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--jf-font-meta);
+  color: var(--jf-dim);
+}
+
+.job-panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--jf-divider);
+}
+
+.job-panel-section-title {
+  margin: 0;
+  font-size: var(--jf-font-meta);
+  font-weight: 650;
+  color: var(--jf-text);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.job-panel-subsection-title {
+  margin: 6px 0 0;
+  font-size: var(--jf-font-meta);
+  font-weight: 600;
+  color: var(--jf-text-sub);
+}
+
+.job-panel-why,
+.job-panel-reasoning,
+.job-panel-tier-sentence,
+.job-panel-activity-line {
+  margin: 0;
+  font-size: var(--jf-font-body);
+  color: var(--jf-text-2);
+  line-height: 1.4;
+}
+
+.job-panel-empty-text {
+  margin: 0;
+  font-size: var(--jf-font-meta);
+  color: var(--jf-text-sub);
+}
+
+.job-panel-facts-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+}
+
+.job-panel-fact {
+  min-width: 0;
+}
+
+.job-panel-fact-label {
+  margin: 0;
+  font-size: var(--jf-font-meta);
+  color: var(--jf-text-sub);
+}
+
+.job-panel-fact-value {
+  margin: 0;
+  font-size: var(--jf-font-meta);
+  color: var(--jf-text);
+  font-weight: 600;
+}
+
+/* The footer "Never show this company" — separated (margin-top: auto
+ * pushes it to the bottom of the flex column) so dismissing one posting
+ * and skipping an employer forever never sit beside each other as equal
+ * weight actions. */
+.job-panel-footer {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--jf-divider);
+}
+
+@media (max-width: 640px) {
+  .job-panel {
+    display: none;
+  }
+}

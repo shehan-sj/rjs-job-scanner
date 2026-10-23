@@ -1,0 +1,155 @@
+# A config.yaml exactly as the PRE-T53 build wrote it (T53's round-trip
+# fixture). Captured by hand from the shape `jobfinder.config.save_config`
+# emits at fdc193b, with every one of the seven settings T53 relocates set
+# to a NON-default value — a default-valued fixture would still "pass" a
+# round-trip test if the loader silently dropped the key, because the
+# dataclass default would supply the same answer.
+#
+# The seven, and why each value here is distinguishable from its default:
+#   location_filter.preferred_regions  (default [])
+#   location_filter.search_country     (default "")
+#   location_filter.remote_ok_worldwide(default True  -> false here)
+#   sources[0].location                (default "")
+#   sources[0].search_terms            (default [])
+#   role_filter.job_functions          (default [])
+#   role_filter.seniority_levels       (default [])
+#
+# Do not "tidy" this file. It is a frozen artifact of the old build; its
+# value is that nothing in this commit's change produced it. `some_future_key`
+# and `some_source_specific_key` are here on purpose — load_config/save_config
+# must preserve unmodelled keys too (tests/test_config_save.py's property).
+check_interval_minutes: 45
+match_threshold: 72
+filter_contracts: false
+some_future_key: 1
+resume:
+  path: resumes/7f3c1e2a-stored.pdf
+  original_filename: Priya Raman - Resume.pdf
+anthropic:
+  # Deliberately NOT written in the real `sk-ant-…` shape. The shape is
+  # not load-bearing for this test (the loader treats it as an opaque
+  # string), and a secret-shaped literal in a committed file is exactly
+  # what the repo's secret-detection hook exists to stop.
+  api_key: fixture-anthropic-key-not-real
+  model: claude-haiku-4-5
+sources:
+  - name: linkedin
+    enabled: true
+    site_names:
+      - linkedin
+    search_terms:
+      - Clinical Research Coordinator
+      - Regulatory Affairs Associate
+      - Medical Writer
+    location: Toronto, Ontario, Canada
+    results_wanted: 85
+    hours_old: 72
+    linkedin_fetch_description: true
+    some_source_specific_key: keep me
+  - name: indeed
+    enabled: true
+    site_names:
+      - indeed
+    search_terms:
+      - Clinical Research Coordinator
+    location: Canada
+    results_wanted: 85
+    hours_old: 48
+    linkedin_fetch_description: false
+  - name: remotive
+    enabled: false
+    site_names: []
+    search_terms:
+      - Medical Writer
+    location: Canada
+    results_wanted: 20
+    hours_old: 24
+    linkedin_fetch_description: false
+  - name: arbeitnow
+    enabled: false
+    site_names: []
+    search_terms: []
+    location: ""
+    results_wanted: 20
+    hours_old: 24
+    linkedin_fetch_description: false
+  - name: jsearch
+    enabled: true
+    site_names: []
+    search_terms:
+      - Regulatory Affairs Associate
+    location: Canada
+    results_wanted: 20
+    hours_old: 24
+    linkedin_fetch_description: false
+    api_key: rapidapi-fixture-key
+  - name: adzuna
+    enabled: false
+    site_names: []
+    search_terms: []
+    location: ""
+    results_wanted: 20
+    hours_old: 24
+    linkedin_fetch_description: false
+    app_id: adzuna-fixture-id
+    app_key: adzuna-fixture-key
+    country: ca
+  # The remote-sweep entry: a SECOND "linkedin" source, which is how the
+  # pre-change build persisted "Enable remote sweep" (settings.py:806-815,
+  # buildSources' trailing push). Keeping it in the fixture is the point —
+  # a loader that de-duplicated sources by name would lose it.
+  - name: linkedin
+    enabled: true
+    site_names:
+      - linkedin
+    search_terms:
+      - Clinical Research Coordinator remote
+      - Regulatory Affairs Associate remote
+      - Medical Writer remote
+    location: Toronto, Ontario, Canada
+    results_wanted: 40
+    hours_old: 72
+    linkedin_fetch_description: true
+notifications:
+  auto_dismiss_seconds: 0
+location_filter:
+  preferred_regions:
+    - Toronto
+    - Mississauga
+    - Hamilton
+  search_country: Canada
+  remote_ok_worldwide: false
+tag_visibility:
+  hide_full_time: false
+  hide_part_time: true
+  hide_contract: true
+  hide_temporary: true
+  hide_internship: true
+  hide_remote: false
+  hide_hybrid: false
+  hide_onsite: true
+agentic_filter:
+  enabled: true
+  min_local_score: 55
+role_filter:
+  job_functions:
+    - Research
+    - Health Care Provider
+  seniority_levels:
+    - Associate
+    - Mid-Senior level
+quality_filter:
+  hide_staffing_agencies: true
+  hide_promoted: true
+  min_salary: 78000
+  min_company_size: 50
+  max_post_age_days: 21
+fillerbot:
+  enabled: true
+  page_timeout_seconds: 45
+  auto_fill_low_confidence: true
+ui:
+  show_log_console: false
+  theme: light
+  console_show_timestamp: false
+  console_show_level: true

@@ -1,0 +1,184 @@
+/* Résumé tab (T54). Deliberately its own stylesheet with its own class
+ * names rather than reusing SettingsView.css's `.settings-*` classes —
+ * this component has to be liftable to a top-level nav destination (T60)
+ * without carrying a dependency on the settings-modal stylesheet along
+ * with it. Uses the same `--jf-*` design tokens every other view does, so
+ * it still looks native to the app today. */
+
+.resume-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.resume-tab-loading,
+.resume-tab-error {
+  padding: 24px;
+  color: var(--jf-text-sub);
+}
+
+.resume-tab-error-text {
+  color: var(--jf-bad);
+  font-size: 12px;
+}
+
+.resume-tab-section {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.resume-tab-section-label {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--jf-text);
+}
+
+.resume-tab-section-hint {
+  font-size: 12px;
+  color: var(--jf-text-sub);
+}
+
+.resume-tab-divider {
+  height: 1px;
+  background: var(--jf-card-border);
+  margin: 14px 0;
+}
+
+.resume-tab-message {
+  font-size: 12px;
+  color: var(--jf-text-sub);
+}
+
+.resume-tab-radio,
+.resume-tab-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--jf-text);
+  cursor: pointer;
+}
+
+.resume-tab-disabled-reason {
+  color: var(--jf-text-sub);
+  font-size: 12px;
+}
+
+.resume-tab-input,
+.resume-tab-textarea {
+  background: var(--jf-input-bg);
+  border: 1px solid var(--jf-input-border);
+  border-radius: 6px;
+  color: var(--jf-text);
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.resume-tab-textarea {
+  resize: vertical;
+}
+
+.resume-tab-file-input {
+  display: none;
+}
+
+.resume-tab-btn {
+  border: 1px solid var(--jf-card-border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  background: var(--jf-card);
+  color: var(--jf-text);
+}
+
+.resume-tab-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.resume-tab-btn-primary {
+  background: var(--jf-accent);
+  border-color: var(--jf-accent);
+  color: #fff;
+}
+
+.resume-tab-btn-secondary {
+  background: transparent;
+}
+
+.resume-tab-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.resume-tab-row {
+  border: 1px solid var(--jf-card-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.resume-tab-row-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--jf-text);
+}
+
+.resume-tab-provenance {
+  display: inline-block;
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  width: fit-content;
+  color: var(--jf-text-sub);
+  border: 1px solid var(--jf-card-border);
+}
+
+.resume-tab-provenance-user {
+  color: var(--jf-accent);
+}
+
+.resume-tab-provenance-absent {
+  font-style: italic;
+}
+
+.resume-tab-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--jf-text);
+}
+
+.resume-tab-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.resume-tab-proposal {
+  border-top: 1px dashed var(--jf-card-border);
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.resume-tab-proposal-text {
+  font-size: 12px;
+  color: var(--jf-text-sub);
+}
+
+.resume-tab-proposal-actions {
+  display: flex;
+  gap: 8px;
+}

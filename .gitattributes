@@ -1,0 +1,19 @@
+# Normalise line endings so scripts authored on Windows still run on macOS.
+# Without this, core.autocrlf=true checks shell scripts out with CRLF and the
+# Mac fails at the shebang with: bad interpreter: /usr/bin/env bash^M
+* text=auto
+
+*.sh   text eol=lf
+*.command text eol=lf
+
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# Binary assets — never touch these
+*.png  binary
+*.ico  binary
+*.icns binary
+*.pdf  binary
+*.dmg  binary
+*.exe  binary

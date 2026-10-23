@@ -1,0 +1,131 @@
+.job-card {
+  background: var(--jf-card);
+  border: 1px solid var(--jf-card-border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.job-card:hover {
+  background: var(--jf-card-hover);
+}
+
+.job-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.job-card-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.job-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--jf-text);
+  margin: 0;
+}
+
+.job-card-subtitle {
+  font-size: 12px;
+  color: var(--jf-text-sub);
+  margin: 0;
+}
+
+.job-card-when {
+  font-size: 12px;
+  margin: 2px 0 0;
+}
+
+.job-card-when-applied {
+  color: var(--jf-score-strong);
+  font-weight: 600;
+}
+
+.job-card-when-removed {
+  color: var(--jf-text-dim);
+}
+
+.job-card-reasoning {
+  font-size: 12px;
+  color: var(--jf-text-dim);
+  margin: 2px 0 0;
+}
+
+.job-card-sep {
+  border: none;
+  border-top: 1px solid var(--jf-card-border);
+  margin: 0;
+}
+
+.job-card-why {
+  font-size: 12px;
+  color: var(--jf-text-sub);
+  margin: 0;
+}
+
+.job-card-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.job-card-actions-spacer {
+  flex: 1;
+}
+
+.job-card-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.job-card-btn-secondary {
+  background: var(--jf-btn-secondary);
+  color: var(--jf-btn-secondary-fg);
+}
+
+.job-card-btn-secondary:hover {
+  background: var(--jf-btn-secondary-h);
+}
+
+.job-card-btn-danger {
+  background: var(--jf-btn-danger);
+  color: var(--jf-btn-danger-fg);
+}
+
+.job-card-btn-danger:hover {
+  background: var(--jf-btn-danger-h);
+}
+
+.job-card-btn-action {
+  background: var(--jf-btn-action);
+  color: var(--jf-btn-action-fg);
+}
+
+.job-card-btn-action:hover {
+  background: var(--jf-btn-action-h);
+}
+
+.job-card-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

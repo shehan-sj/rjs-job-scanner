@@ -1,0 +1,18 @@
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.slider-row-value {
+  flex: 0 0 64px;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--jf-text);
+}
+
+.slider-row-input {
+  flex: 1;
+  accent-color: var(--jf-btn-primary);
+}
